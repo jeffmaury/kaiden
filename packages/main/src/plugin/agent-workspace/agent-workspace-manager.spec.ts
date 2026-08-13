@@ -142,6 +142,7 @@ const configurationRegistry = {
 const providerRegistry = {
   getInferenceConnectionCredentials: vi.fn(),
   getInferenceConnection: vi.fn(),
+  getInferenceConnectionLegacy: vi.fn(),
   getProvider: vi.fn(),
 } as unknown as ProviderRegistry;
 
@@ -1115,7 +1116,7 @@ describe('create – OpenShell mode', () => {
       config: {} as Configuration,
       connectionProperties: [['kaiden.vertexai._flags', {} as IConfigurationPropertyRecordedSchema]],
     });
-    vi.mocked(providerRegistry.getInferenceConnection).mockReturnValue({
+    vi.mocked(providerRegistry.getInferenceConnectionLegacy).mockReturnValue({
       connection: {
         name: 'vertexai',
         id: 'vertexai',
