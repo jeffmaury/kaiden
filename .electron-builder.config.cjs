@@ -157,6 +157,10 @@ const config = {
             to: 'mxc',
             filter: ['!.mxc-version'],
           });
+        } else {
+          throw new Error(
+            `OpenShell assets not found at ${mxcAssetsDir}. Run "pnpm --filter openshell download" (or "pnpm --filter openshell download:all") before packaging.`,
+          );
         }
       }
 
