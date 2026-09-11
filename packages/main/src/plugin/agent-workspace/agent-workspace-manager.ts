@@ -233,9 +233,6 @@ export class AgentWorkspaceManager implements Disposable {
 
     const t0 = performance.now();
 
-    const tV2 = performance.now();
-    console.log(`[workspace-timing] enableV2Provider: ${(tV2 - t0).toFixed(0)}ms`);
-
     await this.openshellCli.createSandbox({
       name: sandboxName,
       gateway: options.gateway,
