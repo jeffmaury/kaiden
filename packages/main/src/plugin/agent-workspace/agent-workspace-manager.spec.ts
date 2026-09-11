@@ -21,10 +21,7 @@ import { access, lstat, readFile, realpath, rm, writeFile } from 'node:fs/promis
 import { homedir, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
-import type {
-  Agent,
-  AgentWorkspaceConfiguration,
-} from '@openkaiden/api';
+import type { Agent, AgentWorkspaceConfiguration } from '@openkaiden/api';
 import type { IpcMainInvokeEvent, WebContents } from 'electron';
 import type { IPty } from 'node-pty';
 import { spawn } from 'node-pty';
