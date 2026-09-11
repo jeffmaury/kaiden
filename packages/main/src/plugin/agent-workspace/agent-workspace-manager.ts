@@ -249,7 +249,7 @@ export class AgentWorkspaceManager implements Disposable {
     });
 
     const tSandbox = performance.now();
-    console.log(`[workspace-timing] createSandbox: ${(tSandbox - tV2).toFixed(0)}ms`);
+    console.log(`[workspace-timing] createSandbox: ${(tSandbox - t0).toFixed(0)}ms`);
 
     const networkPolicy = buildPolicyObject(workspace.network, endpoint);
     if (networkPolicy) {
