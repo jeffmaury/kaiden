@@ -182,7 +182,6 @@ describe('SemanticRouterContainerManager', () => {
     expect(envoyCall.HostConfig.PortBindings['8801/tcp']).toBeDefined();
     expect(envoyCall.HostConfig.Mounts[0].Source).toBe('/tmp/test-storage/configs/my-router/envoy.yaml');
     expect(envoyCall.HostConfig.Mounts[0].Target).toBe('/etc/envoy/envoy.yaml');
-    expect(envoyCall.HostConfig.ExtraHosts).toContain('host.docker.internal:host-gateway');
 
     expect(routerStartMock).not.toHaveBeenCalled();
     expect(envoyStartMock).not.toHaveBeenCalled();
@@ -231,7 +230,7 @@ describe('SemanticRouterContainerManager', () => {
     const backendAddr = (
       (backendLbEndpoints[0]!.endpoint as Record<string, unknown>).address as Record<string, unknown>
     ).socket_address as Record<string, unknown>;
-    expect(backendAddr.address).toBe('localhost');
+    expect(backendAddr.address).toBe('host.docker.internal');
     expect(backendAddr.port_value).toBe(8000);
   });
 

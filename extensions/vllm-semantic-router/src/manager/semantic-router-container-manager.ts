@@ -56,6 +56,11 @@ interface ManagedConnection {
 
 type ModelInfo = { cluster: EnvoyCluster; route: EnvoyRoute };
 
+function convertHost(host: string): string {
+  host = host.split('/')[0];
+  return host === 'localhost' ? 'host.docker.internal' : host;
+}
+
 @injectable()
 export class SemanticRouterContainerManager {
   @inject(VllmSemanticRouterProvider)
@@ -173,7 +178,6 @@ export class SemanticRouterContainerManager {
         PortBindings: {
           [`${ENVOY_LISTEN_PORT}/tcp`]: [{ HostPort: String(envoyHostPort) }],
         },
-        ExtraHosts: ['host.docker.internal:host-gateway'],
         Mounts: [
           {
             Source: envoyConfigFilePath,
@@ -506,27 +510,14 @@ export class SemanticRouterContainerManager {
                 {
                   endpoint: {
                     address: {
-                      socket_address: { address: host.split('/')[0], port_value: port },
+                      socket_address: { address: convertHost(host), port_value: port },
                     },
-                    hostname: host.split('/')[0],
+                    hostname: convertHost(host),
                   },
                 },
               ],
             },
           ],
-        },
-        transport_socket: {
-          name: 'envoy.transport_sockets.tls',
-          typed_config: {
-            '@type': 'type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext',
-            sni: host.split('/')[0],
-            common_tls_context: {
-              tls_params: {
-                tls_minimum_protocol_version: 'TLSv1_2',
-                tls_maximum_protocol_version: 'TLSv1_3',
-              },
-            },
-          },
         },
       },
       route: {
@@ -543,10 +534,25 @@ export class SemanticRouterContainerManager {
         },
         route: {
           cluster: clusterName,
-          host_rewrite_literal: host.split('/')[0],
+          host_rewrite_literal: convertHost(host),
         },
       },
     };
+    if (ref.protocol === 'https') {
+      modelInfo.cluster.transport_socket = {
+        name: 'envoy.transport_sockets.tls',
+        typed_config: {
+          '@type': 'type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext',
+          sni: convertHost(host),
+          common_tls_context: {
+            tls_params: {
+              tls_minimum_protocol_version: 'TLSv1_2',
+              tls_maximum_protocol_version: 'TLSv1_3',
+            },
+          },
+        },
+      };
+    }
     if (model.name.startsWith('gemini')) {
       modelInfo.route.route!.regex_rewrite = {
         pattern: {
