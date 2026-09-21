@@ -16,11 +16,15 @@
  * SPDX-License-Identifier: Apache-2.0
  ***********************************************************************/
 
+import { create } from '@bufbuild/protobuf';
+import { NetworkAccessPreset, NetworkEndpointSchema } from '@nvidia/openshell-sdk/raw';
 import { inject, injectable, multiInject } from 'inversify';
 
+import { OpenshellNetworkPolicy } from '/@/plugin/openshell-cli/openshell-network-policy.js';
 import { OpenshellSdkClientManager } from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
+import { OpenShellRegistry } from '/@/plugin/openshell-registry.js';
 import { DefaultProviderFactory } from '/@/plugin/secret-manager/default-provider-factory.js';
-import type { OpenshellProfile } from '/@api/openshell-gateway-info.js';
+import { CreateProfileOptions, DEFAULT_WORKSPACE, OpenshellProfile } from '/@api/openshell-gateway-info.js';
 import type { SecretCliBackend, SecretCreateOptions, SecretInfo, SecretName } from '/@api/secret-info.js';
 
 import type { ProviderFactory, SelectableProviderFactory } from './provider-factory.js';
@@ -36,6 +40,10 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
 
     @inject(DefaultProviderFactory)
     private readonly defaultProviderFactory: DefaultProviderFactory,
+    @inject(OpenshellNetworkPolicy)
+    private readonly openshellNetworkPolicy: OpenshellNetworkPolicy,
+    @inject(OpenShellRegistry)
+    private readonly openshellRegistry: OpenShellRegistry,
   ) {}
 
   async createSecret(options: SecretCreateOptions, gateway?: string): Promise<SecretName> {
@@ -50,7 +58,14 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
 
   async listSecrets(gateway?: string): Promise<SecretInfo[]> {
     const client = await this.sdkClientManager.getClient(gateway);
-    const response = await client.raw.listProviders({ workspace: '' });
+    const response = await client.raw.listProviders({
+      workspaceScope: {
+        selection: {
+          case: 'workspace',
+          value: DEFAULT_WORKSPACE,
+        },
+      },
+    });
     return response.providers.map(p => ({
       name: p.metadata?.name ?? '',
       type: p.type,
@@ -59,13 +74,28 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
 
   async removeSecret(name: string, gateway?: string): Promise<SecretName> {
     const client = await this.sdkClientManager.getClient(gateway);
-    await client.raw.deleteProvider({ name, workspace: '' });
+    await client.raw.deleteProvider({
+      name,
+      workspaceScope: {
+        selection: {
+          case: 'workspace',
+          value: DEFAULT_WORKSPACE,
+        },
+      },
+    });
     return { name };
   }
 
-  async listServices(): Promise<OpenshellProfile[]> {
-    const client = await this.sdkClientManager.getClient();
-    const response = await client.raw.listProviderProfiles({ workspace: '' });
+  async listServices(gateway?: string): Promise<OpenshellProfile[]> {
+    const client = await this.sdkClientManager.getClient(gateway);
+    const response = await client.raw.listProviderProfiles({
+      workspaceScope: {
+        selection: {
+          case: 'workspace',
+          value: DEFAULT_WORKSPACE,
+        },
+      },
+    });
     return response.profiles.map(p => ({
       id: p.id,
       display_name: p.displayName,
@@ -76,10 +106,74 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
         description: c.description || undefined,
         env_vars: c.envVars.length > 0 ? c.envVars : undefined,
       })),
+      binaries: p.binaries?.length ? p.binaries.map(b => b.path) : undefined,
     }));
   }
 
+  async createProfile(options: CreateProfileOptions, gateway?: string): Promise<void> {
+    const baseProfile = this.openshellRegistry.getProfiles().find(p => p.id === options.from);
+    if (!baseProfile) {
+      throw new Error(`Provider profile "${options.from}" not found`);
+    }
+    const cloned = {
+      ...baseProfile,
+      id: options.name,
+      binaries: options.binaries.map(b => {
+        return { $typeName: 'openshell.sandbox.v1.NetworkBinary', path: b };
+      }),
+    };
+    if (options.endpoint) {
+      const parsed = this.openshellNetworkPolicy.parseModelEndpoint(options.endpoint);
+      if (parsed) {
+        const endpointEntry = create(NetworkEndpointSchema, {
+          host: parsed.host,
+          port: parsed.port,
+          protocol: 'rest',
+          access: NetworkAccessPreset.FULL,
+          allowEncodedSlash: true,
+        });
+        cloned.endpoints = [...(baseProfile.endpoints ?? []), endpointEntry];
+      }
+    }
+    const client = await this.sdkClientManager.getClient(gateway);
+    const result = await client.raw.importProviderProfiles({
+      profiles: [
+        {
+          profile: cloned as typeof baseProfile,
+          source: `cloned from ${options.from}`,
+        },
+      ],
+      workspaceScope: {
+        selection: {
+          case: 'workspace',
+          value: DEFAULT_WORKSPACE,
+        },
+      },
+    });
+    if (!result.imported) {
+      throw new Error(
+        `Provider profile ${cloned.id} can't be imported, diagnostics: ${JSON.stringify(result.diagnostics)}`,
+      );
+    }
+  }
+
+  async deleteProfile(profileId: string, gateway?: string): Promise<void> {
+    const client = await this.sdkClientManager.getClient(gateway);
+    await client.raw.deleteProviderProfile({
+      id: profileId,
+      allowMissing: true,
+      workspaceScope: {
+        selection: {
+          case: 'workspace',
+          value: DEFAULT_WORKSPACE,
+        },
+      },
+    });
+  }
+
   #resolveFactory(options: SecretCreateOptions): ProviderFactory {
-    return this.providerFactories.find(f => f.supports(options.type)) ?? this.defaultProviderFactory;
+    return (
+      this.providerFactories.find(f => f.supports(options.parentType ?? options.type)) ?? this.defaultProviderFactory
+    );
   }
 }
