@@ -31,7 +31,6 @@ import type { SafeStorageRegistry } from '/@/plugin/safe-storage/safe-storage-re
 import type { ApiSenderType } from '/@api/api-sender/api-sender-type.js';
 import type { IConfigurationRegistry } from '/@api/configuration/models.js';
 import type { SecretCreateOptions } from '/@api/secret-info.js';
-import { WORKSPACE_DEFAULT } from '/@api/openshell-gateway-info.js';
 
 import { DefaultProviderFactory } from './default-provider-factory.js';
 import { GcloudAdcProviderFactory } from './gcloud-adc-provider-factory.js';
@@ -198,7 +197,7 @@ describe('openshellAdapter', () => {
         credentials: { GH_TOKEN: 'ghp_abc123' },
         config: {},
       },
-      workspace: WORKSPACE_DEFAULT,
+      workspace: '',
     });
     expect(result).toEqual({ name: 'my-secret' });
   });
@@ -264,7 +263,7 @@ describe('openshellAdapter', () => {
 
     const result = await manager.remove('my-openai');
 
-    expect(mockRaw.deleteProvider).toHaveBeenCalledWith({ name: 'my-openai', workspace: WORKSPACE_DEFAULT });
+    expect(mockRaw.deleteProvider).toHaveBeenCalledWith({ name: 'my-openai', workspace: '' });
     expect(result).toEqual({ name: 'my-openai' });
   });
 
@@ -419,7 +418,7 @@ describe('createSecretForConnection', () => {
         credentials: { token: 'actual-api-key' },
         config: {},
       },
-      workspace: WORKSPACE_DEFAULT,
+      workspace: '',
     });
     expect(result).toEqual({ name: 'kaiden.cursor-conn-456', type: 'cursor' });
   });
@@ -518,7 +517,7 @@ describe('ensureSecretForModel', () => {
         credentials: { token: 'actual-api-key' },
         config: {},
       },
-      workspace: WORKSPACE_DEFAULT,
+      workspace: '',
     });
     expect(result).toEqual({ name: 'kaiden.cursor-conn-789', type: 'cursor' });
   });
@@ -611,7 +610,9 @@ describe('ensureSecretForSandbox', () => {
     mockRaw.listProviderProfiles.mockResolvedValue({
       profiles: [{ id: 'openai', displayName: 'OpenAI', credentials: [] }],
     });
-    mockRaw.getProviderProfile.mockResolvedValue({ profile: { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [] } });
+    mockRaw.getProviderProfile.mockResolvedValue({
+      profile: { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [] },
+    });
     mockRaw.importProviderProfiles.mockResolvedValue({ diagnostics: [] });
 
     const properties = {
@@ -665,7 +666,9 @@ describe('resolveProfileForAgent', () => {
     mockRaw.listProviderProfiles.mockResolvedValue({
       profiles: [{ id: 'openai', displayName: 'OpenAI', credentials: [] }],
     });
-    mockRaw.getProviderProfile.mockResolvedValue({ profile: { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [] } });
+    mockRaw.getProviderProfile.mockResolvedValue({
+      profile: { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [] },
+    });
     mockRaw.importProviderProfiles.mockResolvedValue({ diagnostics: [] });
 
     const result = await manager.resolveProfileForAgent('openai', 'claude');
@@ -678,7 +681,7 @@ describe('resolveProfileForAgent', () => {
             profile: expect.objectContaining({ id: 'openai-claude', binaries: [{ path: '**/claude' }] }),
           }),
         ],
-        workspace: WORKSPACE_DEFAULT,
+        workspace: '',
       }),
     );
   });
@@ -687,7 +690,9 @@ describe('resolveProfileForAgent', () => {
     mockRaw.listProviderProfiles.mockResolvedValue({
       profiles: [{ id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [] }],
     });
-    mockRaw.getProviderProfile.mockResolvedValue({ profile: { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [] } });
+    mockRaw.getProviderProfile.mockResolvedValue({
+      profile: { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [] },
+    });
     mockRaw.importProviderProfiles.mockResolvedValue({ diagnostics: [] });
 
     const result = await manager.resolveProfileForAgent('openai', 'claude');
@@ -700,14 +705,21 @@ describe('resolveProfileForAgent', () => {
             profile: expect.objectContaining({ id: 'openai-claude', binaries: [{ path: '**/claude' }] }),
           }),
         ],
-        workspace: WORKSPACE_DEFAULT,
+        workspace: '',
       }),
     );
   });
 
   test('returns original profile when agent command matches glob in binaries', async () => {
     mockRaw.listProviderProfiles.mockResolvedValue({
-      profiles: [{ id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [{ path: '**/claude' }, { path: '/usr/bin/node' }] }],
+      profiles: [
+        {
+          id: 'openai',
+          displayName: 'OpenAI',
+          credentials: [],
+          binaries: [{ path: '**/claude' }, { path: '/usr/bin/node' }],
+        },
+      ],
     });
 
     const result = await manager.resolveProfileForAgent('openai', '/usr/local/bin/claude');
@@ -720,7 +732,9 @@ describe('resolveProfileForAgent', () => {
     mockRaw.listProviderProfiles.mockResolvedValue({
       profiles: [{ id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [{ path: '/usr/bin/node' }] }],
     });
-    mockRaw.getProviderProfile.mockResolvedValue({ profile: { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [] } });
+    mockRaw.getProviderProfile.mockResolvedValue({
+      profile: { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [] },
+    });
     mockRaw.importProviderProfiles.mockResolvedValue({ diagnostics: [] });
 
     const result = await manager.resolveProfileForAgent('openai', 'claude');
@@ -733,7 +747,7 @@ describe('resolveProfileForAgent', () => {
             profile: expect.objectContaining({ id: 'openai-claude', binaries: [{ path: '**/claude' }] }),
           }),
         ],
-        workspace: WORKSPACE_DEFAULT,
+        workspace: '',
       }),
     );
   });
@@ -742,7 +756,9 @@ describe('resolveProfileForAgent', () => {
     mockRaw.listProviderProfiles.mockResolvedValue({
       profiles: [{ id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [{ path: '/usr/bin/node' }] }],
     });
-    mockRaw.getProviderProfile.mockResolvedValue({ profile: { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [] } });
+    mockRaw.getProviderProfile.mockResolvedValue({
+      profile: { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [] },
+    });
     mockRaw.importProviderProfiles.mockResolvedValue({ diagnostics: [] });
 
     const result = await manager.resolveProfileForAgent('openai', '/usr/local/bin/claude');
@@ -755,7 +771,7 @@ describe('resolveProfileForAgent', () => {
             profile: expect.objectContaining({ id: 'openai-claude', binaries: [{ path: '/usr/local/bin/claude' }] }),
           }),
         ],
-        workspace: WORKSPACE_DEFAULT,
+        workspace: '',
       }),
     );
   });
@@ -778,7 +794,9 @@ describe('resolveProfileForAgent', () => {
     mockRaw.listProviderProfiles.mockResolvedValue({
       profiles: [{ id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [{ path: '/usr/bin/node' }] }],
     });
-    mockRaw.getProviderProfile.mockResolvedValue({ profile: { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [] } });
+    mockRaw.getProviderProfile.mockResolvedValue({
+      profile: { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [] },
+    });
     mockRaw.importProviderProfiles.mockResolvedValue({ diagnostics: [] });
 
     await manager.resolveProfileForAgent('openai', 'claude', 'remote-gw');
@@ -790,7 +808,7 @@ describe('resolveProfileForAgent', () => {
             profile: expect.objectContaining({ id: 'openai-claude', binaries: [{ path: '**/claude' }] }),
           }),
         ],
-        workspace: WORKSPACE_DEFAULT,
+        workspace: '',
       }),
     );
   });
