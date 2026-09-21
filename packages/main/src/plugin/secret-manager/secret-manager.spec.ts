@@ -31,6 +31,7 @@ import type { SafeStorageRegistry } from '/@/plugin/safe-storage/safe-storage-re
 import type { ApiSenderType } from '/@api/api-sender/api-sender-type.js';
 import type { IConfigurationRegistry } from '/@api/configuration/models.js';
 import type { SecretCreateOptions } from '/@api/secret-info.js';
+import { WORKSPACE_DEFAULT } from '/@api/openshell-gateway-info.js';
 
 import { DefaultProviderFactory } from './default-provider-factory.js';
 import { GcloudAdcProviderFactory } from './gcloud-adc-provider-factory.js';
@@ -197,7 +198,7 @@ describe('openshellAdapter', () => {
         credentials: { GH_TOKEN: 'ghp_abc123' },
         config: {},
       },
-      workspace: '',
+      workspace: WORKSPACE_DEFAULT,
     });
     expect(result).toEqual({ name: 'my-secret' });
   });
@@ -263,7 +264,7 @@ describe('openshellAdapter', () => {
 
     const result = await manager.remove('my-openai');
 
-    expect(mockRaw.deleteProvider).toHaveBeenCalledWith({ name: 'my-openai', workspace: '' });
+    expect(mockRaw.deleteProvider).toHaveBeenCalledWith({ name: 'my-openai', workspace: WORKSPACE_DEFAULT });
     expect(result).toEqual({ name: 'my-openai' });
   });
 
@@ -418,7 +419,7 @@ describe('createSecretForConnection', () => {
         credentials: { token: 'actual-api-key' },
         config: {},
       },
-      workspace: '',
+      workspace: WORKSPACE_DEFAULT,
     });
     expect(result).toEqual({ name: 'kaiden.cursor-conn-456', type: 'cursor' });
   });
@@ -517,7 +518,7 @@ describe('ensureSecretForModel', () => {
         credentials: { token: 'actual-api-key' },
         config: {},
       },
-      workspace: '',
+      workspace: WORKSPACE_DEFAULT,
     });
     expect(result).toEqual({ name: 'kaiden.cursor-conn-789', type: 'cursor' });
   });
@@ -677,7 +678,7 @@ describe('resolveProfileForAgent', () => {
             profile: expect.objectContaining({ id: 'openai-claude', binaries: [{ path: '**/claude' }] }),
           }),
         ],
-        workspace: '',
+        workspace: WORKSPACE_DEFAULT,
       }),
     );
   });
@@ -699,7 +700,7 @@ describe('resolveProfileForAgent', () => {
             profile: expect.objectContaining({ id: 'openai-claude', binaries: [{ path: '**/claude' }] }),
           }),
         ],
-        workspace: '',
+        workspace: WORKSPACE_DEFAULT,
       }),
     );
   });
@@ -732,7 +733,7 @@ describe('resolveProfileForAgent', () => {
             profile: expect.objectContaining({ id: 'openai-claude', binaries: [{ path: '**/claude' }] }),
           }),
         ],
-        workspace: '',
+        workspace: WORKSPACE_DEFAULT,
       }),
     );
   });
@@ -754,7 +755,7 @@ describe('resolveProfileForAgent', () => {
             profile: expect.objectContaining({ id: 'openai-claude', binaries: [{ path: '/usr/local/bin/claude' }] }),
           }),
         ],
-        workspace: '',
+        workspace: WORKSPACE_DEFAULT,
       }),
     );
   });
@@ -789,7 +790,7 @@ describe('resolveProfileForAgent', () => {
             profile: expect.objectContaining({ id: 'openai-claude', binaries: [{ path: '**/claude' }] }),
           }),
         ],
-        workspace: '',
+        workspace: WORKSPACE_DEFAULT,
       }),
     );
   });
