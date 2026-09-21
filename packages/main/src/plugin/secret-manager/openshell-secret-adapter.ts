@@ -20,7 +20,7 @@ import { inject, injectable, multiInject } from 'inversify';
 
 import { OpenshellSdkClientManager } from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
 import { DefaultProviderFactory } from '/@/plugin/secret-manager/default-provider-factory.js';
-import type { OpenshellProfile } from '/@api/openshell-gateway-info.js';
+import type { CreateProfileOptions, OpenshellProfile } from '/@api/openshell-gateway-info.js';
 import type { SecretCliBackend, SecretCreateOptions, SecretInfo, SecretName } from '/@api/secret-info.js';
 
 import type { ProviderFactory, SelectableProviderFactory } from './provider-factory.js';
@@ -63,8 +63,8 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
     return { name };
   }
 
-  async listServices(): Promise<OpenshellProfile[]> {
-    const client = await this.sdkClientManager.getClient();
+  async listServices(gateway?: string): Promise<OpenshellProfile[]> {
+    const client = await this.sdkClientManager.getClient(gateway);
     const response = await client.raw.listProviderProfiles({ workspace: '' });
     return response.profiles.map(p => ({
       id: p.id,
@@ -76,7 +76,30 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
         description: c.description || undefined,
         env_vars: c.envVars.length > 0 ? c.envVars : undefined,
       })),
+      binaries: p.binaries?.length ? p.binaries.map(b => b.path) : undefined,
     }));
+  }
+
+  async createProfile(options: CreateProfileOptions, gateway?: string): Promise<void> {
+    const client = await this.sdkClientManager.getClient(gateway);
+    const baseProfile = await client.raw.getProviderProfile({ id: options.from, workspace: '' });
+    if (!baseProfile.profile) {
+      throw new Error(`Provider profile "${options.from}" not found`);
+    }
+    const cloned = {
+      ...baseProfile.profile,
+      id: options.name,
+      binaries: options.binaries.map(b => ({ path: b })),
+    };
+    await client.raw.importProviderProfiles({
+      profiles: [
+        {
+          profile: cloned as typeof baseProfile.profile,
+          source: `cloned from ${options.from}`,
+        },
+      ],
+      workspace: '',
+    });
   }
 
   #resolveFactory(options: SecretCreateOptions): ProviderFactory {
