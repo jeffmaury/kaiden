@@ -18,9 +18,15 @@
 
 import { isIPv6 } from 'node:net';
 
-import type { MessageInitShape } from '@bufbuild/protobuf';
-import type { NetworkEndpointSchema, SandboxPolicySchema } from '@nvidia/openshell-sdk/raw';
+import { create, type MessageInitShape } from '@bufbuild/protobuf';
+import {
+  NetworkAccessPreset,
+  NetworkEndpoint,
+  NetworkEndpointSchema,
+  type SandboxPolicySchema,
+} from '@nvidia/openshell-sdk/raw';
 import { injectable } from 'inversify';
+import { minimatch } from 'minimatch';
 
 import type { NetworkConfiguration } from '/@api/agent-workspace-info.js';
 
@@ -49,6 +55,19 @@ export interface NetworkDestination {
 
 @injectable()
 export class OpenshellNetworkPolicy {
+  extractBinaryFromCommand(command: string): string {
+    return command.trim().split(/\s+/)[0] ?? command.trim();
+  }
+
+  isAgentCommandAllowed(agentBinary: string, binaries: string[]): boolean {
+    return binaries.some(b => {
+      if (!b.includes('*')) {
+        return b === agentBinary;
+      }
+      return minimatch(agentBinary, b);
+    });
+  }
+
   /**
    * Parses a network destination stored as either `host` or `host:port`.
    * IPv6 destinations are not supported by this workspace configuration.
@@ -137,18 +156,20 @@ export class OpenshellNetworkPolicy {
     const networkPolicies: NonNullable<OpenshellPolicy['networkPolicies']> = {};
 
     if (network && network.mode !== 'allow' && network.hosts?.length) {
-      const endpoints: MessageInitShape<typeof NetworkEndpointSchema>[] = network.hosts.flatMap(destination => {
+      const endpoints: NetworkEndpoint[] = network.hosts.flatMap(destination => {
         const parsed = this.parseNetworkDestination(destination);
         if (!parsed) return [];
 
         const ports = parsed.port === undefined ? [443, 80] : [parsed.port];
-        return ports.map(port => ({
-          host: parsed.host,
-          port,
-          protocol: 'rest' as const,
-          access: 'full' as const,
-          allowEncodedSlash: true,
-        }));
+        return ports.map(port =>
+          create(NetworkEndpointSchema, {
+            host: parsed.host,
+            port,
+            protocol: 'rest' as const,
+            access: NetworkAccessPreset.FULL,
+            allowEncodedSlash: true,
+          }),
+        );
       });
       if (endpoints.length > 0) {
         networkPolicies[NETWORK_RULE_NAME] = {
