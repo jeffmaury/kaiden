@@ -198,7 +198,7 @@ export const OpenshellProviderInfoSchema = z.looseObject({
 });
 
 export const OpenshellProviderInfoListSchema = z.looseObject({
-  next_page_token:z.string(),
+  next_page_token: z.string(),
   providers: z.array(OpenshellProviderInfoSchema),
 });
 

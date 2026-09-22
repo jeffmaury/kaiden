@@ -25,9 +25,6 @@ import type { ExecInteractiveSession } from '@nvidia/openshell-sdk';
 import type {
   Agent,
   AgentWorkspaceConfiguration,
-  AISDKInferenceProvider,
-  Configuration,
-  ProviderConnectionStatus,
 } from '@openkaiden/api';
 import { Terminal as HeadlessTerminal } from '@xterm/headless';
 import type { IpcMainInvokeEvent, WebContents } from 'electron';
