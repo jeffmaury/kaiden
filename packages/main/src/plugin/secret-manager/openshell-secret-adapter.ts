@@ -89,7 +89,7 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
     const cloned = {
       ...baseProfile.profile,
       id: options.name,
-      binaries: options.binaries.map(b => ({ path: b })),
+      binaries: [{$typeName: 'openshell.sandbox.v1.NetworkBinary', path: '/usr/local/bin/claude'} ],
     };
     await client.raw.importProviderProfiles({
       profiles: [

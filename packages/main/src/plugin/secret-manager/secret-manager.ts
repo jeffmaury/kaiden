@@ -246,7 +246,7 @@ export class SecretManager {
       return clonedProfileName;
     }
 
-    const binaryPattern = isAbsolute(agentBinary) ? agentBinary : `**/${agentBinary}`;
+    const binaryPattern = isAbsolute(agentBinary) ? agentBinary : `/**/${agentBinary}`;
     await this.openshellAdapter.createProfile(
       { name: clonedProfileName, from: profileId, binaries: [binaryPattern] },
       gateway,
