@@ -20,7 +20,7 @@ import { inject, injectable, multiInject } from 'inversify';
 
 import { OpenshellSdkClientManager } from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
 import { DefaultProviderFactory } from '/@/plugin/secret-manager/default-provider-factory.js';
-import type { CreateProfileOptions, OpenshellProfile } from '/@api/openshell-gateway-info.js';
+import { CreateProfileOptions, DEFAULT_WORKSPACE, OpenshellProfile } from '/@api/openshell-gateway-info.js';
 import type { SecretCliBackend, SecretCreateOptions, SecretInfo, SecretName } from '/@api/secret-info.js';
 
 import type { ProviderFactory, SelectableProviderFactory } from './provider-factory.js';
@@ -50,7 +50,7 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
 
   async listSecrets(gateway?: string): Promise<SecretInfo[]> {
     const client = await this.sdkClientManager.getClient(gateway);
-    const response = await client.raw.listProviders({ workspace: '' });
+    const response = await client.raw.listProviders({ workspace: DEFAULT_WORKSPACE });
     return response.providers.map(p => ({
       name: p.metadata?.name ?? '',
       type: p.type,
@@ -59,13 +59,13 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
 
   async removeSecret(name: string, gateway?: string): Promise<SecretName> {
     const client = await this.sdkClientManager.getClient(gateway);
-    await client.raw.deleteProvider({ name, workspace: '' });
+    await client.raw.deleteProvider({ name, workspace: DEFAULT_WORKSPACE });
     return { name };
   }
 
   async listServices(gateway?: string): Promise<OpenshellProfile[]> {
     const client = await this.sdkClientManager.getClient(gateway);
-    const response = await client.raw.listProviderProfiles({ workspace: '' });
+    const response = await client.raw.listProviderProfiles({ workspace: DEFAULT_WORKSPACE });
     return response.profiles.map(p => ({
       id: p.id,
       display_name: p.displayName,
@@ -82,14 +82,16 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
 
   async createProfile(options: CreateProfileOptions, gateway?: string): Promise<void> {
     const client = await this.sdkClientManager.getClient(gateway);
-    const baseProfile = await client.raw.getProviderProfile({ id: options.from, workspace: '' });
+    const baseProfile = await client.raw.getProviderProfile({ id: options.from, workspace: DEFAULT_WORKSPACE });
     if (!baseProfile.profile) {
       throw new Error(`Provider profile "${options.from}" not found`);
     }
     const cloned = {
       ...baseProfile.profile,
       id: options.name,
-      binaries: [{$typeName: 'openshell.sandbox.v1.NetworkBinary', path: '/usr/local/bin/claude'} ],
+      binaries: options.binaries.map(b => {
+        return { $typeName: 'openshell.sandbox.v1.NetworkBinary', path: b };
+      }),
     };
     await client.raw.importProviderProfiles({
       profiles: [
@@ -98,7 +100,7 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
           source: `cloned from ${options.from}`,
         },
       ],
-      workspace: '',
+      workspace: DEFAULT_WORKSPACE,
     });
   }
 

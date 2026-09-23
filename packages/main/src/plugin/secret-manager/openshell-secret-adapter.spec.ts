@@ -20,6 +20,7 @@ import type { OpenShellClient } from '@nvidia/openshell-sdk';
 import { beforeEach, describe, expect, type Mock, test, vi } from 'vitest';
 
 import { OpenshellSdkClientManager } from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
+import { DEFAULT_WORKSPACE } from '/@api/openshell-gateway-info.js';
 import type { SecretCreateOptions } from '/@api/secret-info.js';
 
 import { DefaultProviderFactory } from './default-provider-factory.js';
@@ -121,7 +122,7 @@ describe('listSecrets', () => {
 
     const result = await adapter.listSecrets();
 
-    expect(mockRaw.listProviders).toHaveBeenCalledWith({ workspace: '' });
+    expect(mockRaw.listProviders).toHaveBeenCalledWith({ workspace: DEFAULT_WORKSPACE });
     expect(result).toEqual([
       { name: 'my-openai', type: 'openai' },
       { name: 'my-anthropic', type: 'anthropic' },
@@ -157,7 +158,7 @@ describe('removeSecret', () => {
 
     const result = await adapter.removeSecret('my-openai');
 
-    expect(mockRaw.deleteProvider).toHaveBeenCalledWith({ name: 'my-openai', workspace: '' });
+    expect(mockRaw.deleteProvider).toHaveBeenCalledWith({ name: 'my-openai', workspace: DEFAULT_WORKSPACE });
     expect(result).toEqual({ name: 'my-openai' });
   });
 
@@ -197,7 +198,7 @@ describe('listServices', () => {
 
     const result = await adapter.listServices();
 
-    expect(mockRaw.listProviderProfiles).toHaveBeenCalledWith({ workspace: '' });
+    expect(mockRaw.listProviderProfiles).toHaveBeenCalledWith({ workspace: DEFAULT_WORKSPACE });
     expect(result).toEqual([
       {
         id: 'openai',

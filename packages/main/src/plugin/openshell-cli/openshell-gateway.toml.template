@@ -3,7 +3,7 @@ version = 2
 
 {{#driver}}
 [openshell.gateway]
-compute_drivers = ["{{{driver}}}"]
+compute_driver = "{{{driver}}}"
 
 [openshell.drivers.{{{driver}}}]
 {{#supportsContainerSettings}}

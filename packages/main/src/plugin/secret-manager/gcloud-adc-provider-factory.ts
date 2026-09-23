@@ -24,6 +24,7 @@ import type { OpenShellClient } from '@nvidia/openshell-sdk';
 import { ProviderCredentialRefreshStrategy } from '@nvidia/openshell-sdk/raw';
 import { injectable } from 'inversify';
 
+import { DEFAULT_WORKSPACE } from '/@api/openshell-gateway-info.js';
 import type { SecretCreateOptions } from '/@api/secret-info.js';
 
 import type { SelectableProviderFactory } from './provider-factory.js';
@@ -37,7 +38,7 @@ export class GcloudAdcProviderFactory implements SelectableProviderFactory {
   async createProvider(client: OpenShellClient, options: SecretCreateOptions): Promise<void> {
     const credentials = typeof options.value !== 'string' ? options.value.credentials : undefined;
 
-    const profileResponse = await client.raw.getProviderProfile({ id: options.type, workspace: '' });
+    const profileResponse = await client.raw.getProviderProfile({ id: options.type, workspace: DEFAULT_WORKSPACE });
     const adcCredential = profileResponse.profile?.credentials.find(
       c => c.refresh?.strategy === ProviderCredentialRefreshStrategy.OAUTH2_REFRESH_TOKEN,
     );
@@ -56,7 +57,7 @@ export class GcloudAdcProviderFactory implements SelectableProviderFactory {
         type: options.type,
         config: typeof value !== 'string' ? (value.config ?? {}) : {},
       },
-      workspace: '',
+      workspace: DEFAULT_WORKSPACE,
     });
 
     const { clientId, clientSecret, refreshToken } = await readGcloudAdc(credentials);
@@ -71,16 +72,16 @@ export class GcloudAdcProviderFactory implements SelectableProviderFactory {
           refresh_token: refreshToken,
         },
         secretMaterialKeys: ['client_secret', 'refresh_token'],
-        workspace: '',
+        workspace: DEFAULT_WORKSPACE,
       });
 
       await client.raw.rotateProviderCredential({
         provider: options.name,
         credentialKey,
-        workspace: '',
+        workspace: DEFAULT_WORKSPACE,
       });
     } catch (error: unknown) {
-      await client.raw.deleteProvider({ name: options.name, workspace: '' }).catch(() => {});
+      await client.raw.deleteProvider({ name: options.name, workspace: DEFAULT_WORKSPACE }).catch(() => {});
       throw error;
     }
   }

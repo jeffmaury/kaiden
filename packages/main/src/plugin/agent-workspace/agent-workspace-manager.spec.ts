@@ -48,7 +48,7 @@ import type { Task } from '/@/plugin/tasks/tasks.js';
 import type { Exec } from '/@/plugin/util/exec.js';
 import type { AgentWorkspaceCreateOptions } from '/@api/agent-workspace-info.js';
 import type { ApiSenderType } from '/@api/api-sender/api-sender-type.js';
-import type { IConfigurationPropertyRecordedSchema, IConfigurationRegistry } from '/@api/configuration/models.js';
+import type { IConfigurationRegistry } from '/@api/configuration/models.js';
 import type { GatewayInfo } from '/@api/openshell-gateway-info.js';
 import { AGENT_LABEL, decodeWorkspaceLabels, SECRET_LABEL, WORKSPACE_LABEL } from '/@api/openshell-gateway-info.js';
 import type { TaskState, TaskStatus } from '/@api/taskInfo.js';

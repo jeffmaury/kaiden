@@ -212,9 +212,9 @@ export class AgentWorkspaceManager implements Disposable {
         throw new Error(`Unable to create workspace: agent ${options.agent} not registered`);
       }
 
-      await this.ensureModelSecret(options, sandboxName, agent.command);
-      const workspaceId = await this.createOpenshell(options, gateway);
-===   task.status = 'success';
+      const secret = await this.ensureModelSecret(options, sandboxName, agent.command);
+      const workspaceId = await this.createOpenshell(options, gateway, secret);
+      task.status = 'success';
       return workspaceId;
     } catch (err: unknown) {
       const detail = err instanceof Error ? err.message : String(err);
@@ -227,7 +227,11 @@ export class AgentWorkspaceManager implements Disposable {
     }
   }
 
-  private async createOpenshell(options: AgentWorkspaceCreateOptions, gateway: GatewayInfo): Promise<AgentWorkspaceId> {
+  private async createOpenshell(
+    options: AgentWorkspaceCreateOptions,
+    gateway: GatewayInfo,
+    secretName?: string,
+  ): Promise<AgentWorkspaceId> {
     const connectionInfo = this.providerRegistry.getInferenceConnectionCredentials(options.model);
 
     const modelName = options.model.split('::')[1] ?? '';

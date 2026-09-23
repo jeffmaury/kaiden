@@ -30,6 +30,7 @@ import type { ProviderRegistry } from '/@/plugin/provider-registry.js';
 import type { SafeStorageRegistry } from '/@/plugin/safe-storage/safe-storage-registry.js';
 import type { ApiSenderType } from '/@api/api-sender/api-sender-type.js';
 import type { IConfigurationRegistry } from '/@api/configuration/models.js';
+import { DEFAULT_WORKSPACE } from '/@api/openshell-gateway-info.js';
 import type { SecretCreateOptions } from '/@api/secret-info.js';
 
 import { DefaultProviderFactory } from './default-provider-factory.js';
@@ -197,7 +198,7 @@ describe('openshellAdapter', () => {
         credentials: { GH_TOKEN: 'ghp_abc123' },
         config: {},
       },
-      workspace: '',
+      workspace: DEFAULT_WORKSPACE,
     });
     expect(result).toEqual({ name: 'my-secret' });
   });
@@ -263,7 +264,7 @@ describe('openshellAdapter', () => {
 
     const result = await manager.remove('my-openai');
 
-    expect(mockRaw.deleteProvider).toHaveBeenCalledWith({ name: 'my-openai', workspace: '' });
+    expect(mockRaw.deleteProvider).toHaveBeenCalledWith({ name: 'my-openai', workspace: DEFAULT_WORKSPACE });
     expect(result).toEqual({ name: 'my-openai' });
   });
 
@@ -418,7 +419,7 @@ describe('createSecretForConnection', () => {
         credentials: { token: 'actual-api-key' },
         config: {},
       },
-      workspace: '',
+      workspace: DEFAULT_WORKSPACE,
     });
     expect(result).toEqual({ name: 'kaiden.cursor-conn-456', type: 'cursor' });
   });
@@ -517,7 +518,7 @@ describe('ensureSecretForModel', () => {
         credentials: { token: 'actual-api-key' },
         config: {},
       },
-      workspace: '',
+      workspace: DEFAULT_WORKSPACE,
     });
     expect(result).toEqual({ name: 'kaiden.cursor-conn-789', type: 'cursor' });
   });
@@ -678,10 +679,13 @@ describe('resolveProfileForAgent', () => {
       expect.objectContaining({
         profiles: [
           expect.objectContaining({
-            profile: expect.objectContaining({ id: 'openai-claude', binaries: [{ path: '**/claude' }] }),
+            profile: expect.objectContaining({
+              id: 'openai-claude',
+              binaries: [expect.objectContaining({ path: '/**/claude' })],
+            }),
           }),
         ],
-        workspace: '',
+        workspace: DEFAULT_WORKSPACE,
       }),
     );
   });
@@ -702,10 +706,13 @@ describe('resolveProfileForAgent', () => {
       expect.objectContaining({
         profiles: [
           expect.objectContaining({
-            profile: expect.objectContaining({ id: 'openai-claude', binaries: [{ path: '**/claude' }] }),
+            profile: expect.objectContaining({
+              id: 'openai-claude',
+              binaries: [expect.objectContaining({ path: '/**/claude' })],
+            }),
           }),
         ],
-        workspace: '',
+        workspace: DEFAULT_WORKSPACE,
       }),
     );
   });
@@ -744,10 +751,13 @@ describe('resolveProfileForAgent', () => {
       expect.objectContaining({
         profiles: [
           expect.objectContaining({
-            profile: expect.objectContaining({ id: 'openai-claude', binaries: [{ path: '**/claude' }] }),
+            profile: expect.objectContaining({
+              id: 'openai-claude',
+              binaries: [expect.objectContaining({ path: '/**/claude' })],
+            }),
           }),
         ],
-        workspace: '',
+        workspace: DEFAULT_WORKSPACE,
       }),
     );
   });
@@ -768,10 +778,13 @@ describe('resolveProfileForAgent', () => {
       expect.objectContaining({
         profiles: [
           expect.objectContaining({
-            profile: expect.objectContaining({ id: 'openai-claude', binaries: [{ path: '/usr/local/bin/claude' }] }),
+            profile: expect.objectContaining({
+              id: 'openai-claude',
+              binaries: [expect.objectContaining({ path: '/usr/local/bin/claude' })],
+            }),
           }),
         ],
-        workspace: '',
+        workspace: DEFAULT_WORKSPACE,
       }),
     );
   });
@@ -805,10 +818,13 @@ describe('resolveProfileForAgent', () => {
       expect.objectContaining({
         profiles: [
           expect.objectContaining({
-            profile: expect.objectContaining({ id: 'openai-claude', binaries: [{ path: '**/claude' }] }),
+            profile: expect.objectContaining({
+              id: 'openai-claude',
+              binaries: [expect.objectContaining({ path: '/**/claude' })],
+            }),
           }),
         ],
-        workspace: '',
+        workspace: DEFAULT_WORKSPACE,
       }),
     );
   });
