@@ -70,6 +70,7 @@ export const SandboxInfoSchema = z.object({
     'Starting',
     'Stopping',
     'Stopped',
+    'Completed',
   ]),
   created_at: z
     .string()

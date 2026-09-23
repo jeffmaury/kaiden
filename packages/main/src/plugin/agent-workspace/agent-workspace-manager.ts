@@ -694,8 +694,8 @@ export class AgentWorkspaceManager implements Disposable {
     for (const gateway of gateways) {
       try {
         const client = await this.openshellSdkClientManager.getClient(gateway.name);
-        const refs = await client.sandbox.list();
-        const sandboxes: SandboxInfo[] = refs.map(mapSdkSandboxRef);
+        const refs = client.sandbox.list();
+        const sandboxes: SandboxInfo[] = (await refs.all()).map(mapSdkSandboxRef);
         for (const sandbox of sandboxes) {
           if (sandbox.labels) {
             sandbox.sourcePath = decodeWorkspaceLabels(sandbox.labels);

@@ -50,7 +50,14 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
 
   async listSecrets(gateway?: string): Promise<SecretInfo[]> {
     const client = await this.sdkClientManager.getClient(gateway);
-    const response = await client.raw.listProviders({ workspace: DEFAULT_WORKSPACE });
+    const response = await client.raw.listProviders({
+      workspaceScope: {
+        selection: {
+          case: 'workspace',
+          value: DEFAULT_WORKSPACE,
+        },
+      },
+    });
     return response.providers.map(p => ({
       name: p.metadata?.name ?? '',
       type: p.type,
@@ -59,13 +66,28 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
 
   async removeSecret(name: string, gateway?: string): Promise<SecretName> {
     const client = await this.sdkClientManager.getClient(gateway);
-    await client.raw.deleteProvider({ name, workspace: DEFAULT_WORKSPACE });
+    await client.raw.deleteProvider({
+      name,
+      workspaceScope: {
+        selection: {
+          case: 'workspace',
+          value: DEFAULT_WORKSPACE,
+        },
+      },
+    });
     return { name };
   }
 
   async listServices(gateway?: string): Promise<OpenshellProfile[]> {
     const client = await this.sdkClientManager.getClient(gateway);
-    const response = await client.raw.listProviderProfiles({ workspace: DEFAULT_WORKSPACE });
+    const response = await client.raw.listProviderProfiles({
+      workspaceScope: {
+        selection: {
+          case: 'workspace',
+          value: DEFAULT_WORKSPACE,
+        },
+      },
+    });
     return response.profiles.map(p => ({
       id: p.id,
       display_name: p.displayName,
@@ -82,7 +104,15 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
 
   async createProfile(options: CreateProfileOptions, gateway?: string): Promise<void> {
     const client = await this.sdkClientManager.getClient(gateway);
-    const baseProfile = await client.raw.getProviderProfile({ id: options.from, workspace: DEFAULT_WORKSPACE });
+    const baseProfile = await client.raw.getProviderProfile({
+      id: options.from,
+      workspaceScope: {
+        selection: {
+          case: 'workspace',
+          value: DEFAULT_WORKSPACE,
+        },
+      },
+    });
     if (!baseProfile.profile) {
       throw new Error(`Provider profile "${options.from}" not found`);
     }
@@ -100,7 +130,12 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
           source: `cloned from ${options.from}`,
         },
       ],
-      workspace: DEFAULT_WORKSPACE,
+      workspaceScope: {
+        selection: {
+          case: 'workspace',
+          value: DEFAULT_WORKSPACE,
+        },
+      },
     });
   }
 

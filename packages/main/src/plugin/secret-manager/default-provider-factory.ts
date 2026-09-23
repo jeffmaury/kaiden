@@ -40,7 +40,12 @@ export class DefaultProviderFactory implements ProviderFactory {
         credentials: value.credentials,
         config: value.config ?? {},
       },
-      workspace: DEFAULT_WORKSPACE,
+      workspaceScope: {
+        selection: {
+          case: 'workspace',
+          value: DEFAULT_WORKSPACE,
+        },
+      },
     });
   }
 }
