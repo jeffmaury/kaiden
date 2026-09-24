@@ -559,16 +559,11 @@ export class AgentWorkspaceManager implements Disposable {
       .flatMap(entry => entry.sandboxes)
       .find(ws => ws.id === id);
     const workspaceName = workspace?.name ?? id;
-    await this.deleteWorkspace(workspaceName, gateway, id, workspace?.labels);
+    await this.deleteWorkspace(workspaceName, gateway, workspace?.labels);
     return { id };
   }
 
-  private async deleteWorkspace(
-    name: string,
-    gateway: string,
-    terminalId?: string,
-    labels?: Record<string, string>,
-  ): Promise<void> {
+  private async deleteWorkspace(name: string, gateway: string, labels?: Record<string, string>): Promise<void> {
     const task = this.taskManager.createTask({ title: `Deleting workspace "${name}"` });
     task.state = 'running';
     task.status = 'in-progress';
@@ -741,7 +736,7 @@ export class AgentWorkspaceManager implements Disposable {
       .filter(entry => entry.gateway.name === gateway)
       .flatMap(entry => entry.sandboxes)
       .find(ws => ws.name === name);
-    await this.deleteWorkspace(name, gateway, undefined, workspace?.labels);
+    await this.deleteWorkspace(name, gateway, workspace?.labels);
   }
 
   async shellInAgentWorkspace(

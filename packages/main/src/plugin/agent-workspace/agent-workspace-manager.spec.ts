@@ -22,10 +22,7 @@ import { homedir, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 import type { ExecInteractiveSession } from '@nvidia/openshell-sdk';
-import type {
-  Agent,
-  AgentWorkspaceConfiguration,
-} from '@openkaiden/api';
+import type { Agent, AgentWorkspaceConfiguration } from '@openkaiden/api';
 import { Terminal as HeadlessTerminal } from '@xterm/headless';
 import type { IpcMainInvokeEvent, WebContents } from 'electron';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
