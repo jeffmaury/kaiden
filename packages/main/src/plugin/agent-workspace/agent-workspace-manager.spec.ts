@@ -104,7 +104,12 @@ function mockSdkListSandboxes(
 ): void {
   vi.mocked(openshellGatewayStateManager.listGateways).mockReturnValue(gateways);
   vi.mocked(openshellSdkClientManager.getClient).mockResolvedValue({
-    sandbox: { ...sdkSandbox, list: vi.fn().mockResolvedValue(refs) },
+    sandbox: {
+      ...sdkSandbox,
+      list: vi.fn().mockReturnValue({
+        all: vi.fn().mockResolvedValue(refs),
+      }),
+    },
   } as never);
 }
 

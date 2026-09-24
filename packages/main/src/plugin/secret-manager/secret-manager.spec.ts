@@ -198,7 +198,12 @@ describe('openshellAdapter', () => {
         credentials: { GH_TOKEN: 'ghp_abc123' },
         config: {},
       },
-      workspace: DEFAULT_WORKSPACE,
+      workspaceScope: {
+        selection: {
+          case: 'workspace',
+          value: DEFAULT_WORKSPACE,
+        },
+      },
     });
     expect(result).toEqual({ name: 'my-secret' });
   });
@@ -264,7 +269,15 @@ describe('openshellAdapter', () => {
 
     const result = await manager.remove('my-openai');
 
-    expect(mockRaw.deleteProvider).toHaveBeenCalledWith({ name: 'my-openai', workspace: DEFAULT_WORKSPACE });
+    expect(mockRaw.deleteProvider).toHaveBeenCalledWith({
+      name: 'my-openai',
+      workspaceScope: {
+        selection: {
+          case: 'workspace',
+          value: DEFAULT_WORKSPACE,
+        },
+      },
+    });
     expect(result).toEqual({ name: 'my-openai' });
   });
 
@@ -419,7 +432,12 @@ describe('createSecretForConnection', () => {
         credentials: { token: 'actual-api-key' },
         config: {},
       },
-      workspace: DEFAULT_WORKSPACE,
+      workspaceScope: {
+        selection: {
+          case: 'workspace',
+          value: DEFAULT_WORKSPACE,
+        },
+      },
     });
     expect(result).toEqual({ name: 'kaiden.cursor-conn-456', type: 'cursor' });
   });
@@ -518,7 +536,12 @@ describe('ensureSecretForModel', () => {
         credentials: { token: 'actual-api-key' },
         config: {},
       },
-      workspace: DEFAULT_WORKSPACE,
+      workspaceScope: {
+        selection: {
+          case: 'workspace',
+          value: DEFAULT_WORKSPACE,
+        },
+      },
     });
     expect(result).toEqual({ name: 'kaiden.cursor-conn-789', type: 'cursor' });
   });
@@ -685,7 +708,12 @@ describe('resolveProfileForAgent', () => {
             }),
           }),
         ],
-        workspace: DEFAULT_WORKSPACE,
+        workspaceScope: {
+          selection: {
+            case: 'workspace',
+            value: DEFAULT_WORKSPACE,
+          },
+        },
       }),
     );
   });
@@ -712,7 +740,12 @@ describe('resolveProfileForAgent', () => {
             }),
           }),
         ],
-        workspace: DEFAULT_WORKSPACE,
+        workspaceScope: {
+          selection: {
+            case: 'workspace',
+            value: DEFAULT_WORKSPACE,
+          },
+        },
       }),
     );
   });
@@ -757,7 +790,12 @@ describe('resolveProfileForAgent', () => {
             }),
           }),
         ],
-        workspace: DEFAULT_WORKSPACE,
+        workspaceScope: {
+          selection: {
+            case: 'workspace',
+            value: DEFAULT_WORKSPACE,
+          },
+        },
       }),
     );
   });
@@ -784,7 +822,12 @@ describe('resolveProfileForAgent', () => {
             }),
           }),
         ],
-        workspace: DEFAULT_WORKSPACE,
+        workspaceScope: {
+          selection: {
+            case: 'workspace',
+            value: DEFAULT_WORKSPACE,
+          },
+        },
       }),
     );
   });
@@ -824,7 +867,12 @@ describe('resolveProfileForAgent', () => {
             }),
           }),
         ],
-        workspace: DEFAULT_WORKSPACE,
+        workspaceScope: {
+          selection: {
+            case: 'workspace',
+            value: DEFAULT_WORKSPACE,
+          },
+        },
       }),
     );
   });

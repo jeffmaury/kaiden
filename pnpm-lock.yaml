@@ -42,6 +42,9 @@ importers:
       '@ai-sdk/mcp':
         specifier: ^2.0.16
         version: 2.0.16(zod@4.3.6)
+      '@bufbuild/protobuf':
+        specifier: ^2.15.0
+        version: 2.15.0
       '@docker/extension-api-client-types':
         specifier: 0.4.2
         version: 0.4.2
@@ -1347,6 +1350,9 @@ packages:
   '@bufbuild/protobuf@2.14.0':
     resolution: {integrity: sha512-C3UGsiCwSprE2NKIIFA3hCDlpXTMCAXRZuEVp88L1GY36Y41+rYL5fryE+nOFhp4p4JPQvdV8PQ4DWgHgeTE+w==}
 
+  '@bufbuild/protobuf@2.15.0':
+    resolution: {integrity: sha512-DAheWUkVr/SJTWCc+lg9dhY0eN4SaWlf4+bG1KzHeXbnqt0AfB/NX0Z+VunGlM1ki1B4zVvye27MpKh/svySUA==}
+
   '@colors/colors@1.6.0':
     resolution: {integrity: sha512-Ir+AOibqzrIsL6ajt3Rz3LskB7OiMVHqltZmspbW/TJuTVuyOMirVqAkjfY6JISiLHgyNqicAC8AyHHGzNd/dA==}
     engines: {node: '>=0.1.90'}
@@ -2075,6 +2081,10 @@ packages:
 
   '@openkaiden/opnshll-sdk@0.0.0-next.20260923-069ae6b':
     resolution: {integrity: sha512-HduUOayS0FzsiQonwaLXfZb2ebj4HWXyfxjLdmBsTUmzX/T6g54dMd+N7DUz7J2FddBiOgteYOVb8OkqDk7A3g==}
+    engines: {node: '>=20.3'}
+
+  '@openkaiden/opnshll-sdk@0.0.116':
+    resolution: {integrity: sha512-w5l6fdxrZhp7CS3gnGeQtUjFR2Gy58c063KQrmU3c5fxKa/qxPqmxfCU9JHScJ2PlphxJsLKdLh0aR7fpWOwtg==}
     engines: {node: '>=20.3'}
 
   '@openkaiden/workspace-configuration@0.15.0':
@@ -8057,6 +8067,8 @@ snapshots:
 
   '@bufbuild/protobuf@2.14.0': {}
 
+  '@bufbuild/protobuf@2.15.0': {}
+
   '@colors/colors@1.6.0': {}
 
   '@commitlint/cli@20.4.2(@types/node@24.1.0)(typescript@5.9.3)':
@@ -8173,9 +8185,18 @@ snapshots:
       '@bufbuild/protobuf': 2.14.0
       '@connectrpc/connect': 2.1.2(@bufbuild/protobuf@2.14.0)
 
+  '@connectrpc/connect-node@2.1.2(@bufbuild/protobuf@2.15.0)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.15.0))':
+    dependencies:
+      '@bufbuild/protobuf': 2.15.0
+      '@connectrpc/connect': 2.1.2(@bufbuild/protobuf@2.15.0)
+
   '@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.14.0)':
     dependencies:
       '@bufbuild/protobuf': 2.14.0
+
+  '@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.15.0)':
+    dependencies:
+      '@bufbuild/protobuf': 2.15.0
 
   '@csstools/color-helpers@6.0.2': {}
 
@@ -8949,6 +8970,12 @@ snapshots:
       ajv: 8.18.0
 
   '@openkaiden/opnshll-sdk@0.0.0-next.20260923-069ae6b':
+    dependencies:
+      '@bufbuild/protobuf': 2.15.0
+      '@connectrpc/connect': 2.1.2(@bufbuild/protobuf@2.15.0)
+      '@connectrpc/connect-node': 2.1.2(@bufbuild/protobuf@2.15.0)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.15.0))
+
+  '@openkaiden/opnshll-sdk@0.0.116':
     dependencies:
       '@bufbuild/protobuf': 2.14.0
       '@connectrpc/connect': 2.1.2(@bufbuild/protobuf@2.14.0)

@@ -55,7 +55,12 @@ describe('createProvider', () => {
         credentials: { GH_TOKEN: 'ghp_abc123' },
         config: { ORG: 'acme' },
       },
-      workspace: DEFAULT_WORKSPACE,
+      workspaceScope: {
+        selection: {
+          case: 'workspace',
+          value: DEFAULT_WORKSPACE,
+        },
+      },
     });
   });
 
