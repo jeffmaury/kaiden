@@ -17,6 +17,7 @@ extensions/podman/assets/
 extensions-extra/
 kdn-binary/
 extensions/openshell/assets/
+packages/main/src/assets/openshell/
 .claude
 output/
 __mocks__/@openkaiden/api.ts
