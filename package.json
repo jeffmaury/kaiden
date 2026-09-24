@@ -130,7 +130,7 @@
     "typecheck:extensions:vertex-ai": "tsc --noEmit --project extensions/vertex-ai",
     "typecheck": "pnpm run typecheck:main && pnpm run typecheck:preload && pnpm run typecheck:renderer && pnpm run typecheck:preload-webview && pnpm run typecheck:extensions && pnpm run typecheck:extension-api",
     "prepare": "husky install",
-    "postinstall": "electron-builder install-app-deps && node scripts/copy-svelte-skills.js && tsx packages/main/scripts/download-provider-profiles.ts"
+    "postinstall": "electron-builder install-app-deps && node scripts/copy-svelte-skills.js && node packages/main/scripts/download-provider-profiles.js"
   },
   "lint-staged": {
     "*.{js,ts,tsx,svelte}": [

@@ -1,4 +1,4 @@
-#!/usr/bin/env tsx
+#!/usr/bin/env node
 /**********************************************************************
  * Copyright (C) 2026 Red Hat, Inc.
  *
@@ -29,14 +29,8 @@ const PROVIDERS_PATH = 'providers';
 const OUTPUT_DIR = resolve(__dirname, '..', 'src', 'assets', 'openshell');
 const VERSION_MARKER = '.profiles-version';
 
-interface GitHubContentEntry {
-  name: string;
-  type: string;
-  download_url: string | null;
-}
-
-function getAuthHeaders(): Record<string, string> {
-  const headers: Record<string, string> = { Accept: 'application/vnd.github.v3+json' };
+function getAuthHeaders() {
+  const headers = { Accept: 'application/vnd.github.v3+json' };
   const token = process.env['GITHUB_TOKEN'];
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -44,16 +38,16 @@ function getAuthHeaders(): Record<string, string> {
   return headers;
 }
 
-function getOpenshellVersion(): string {
+function getOpenshellVersion() {
   const pkgPath = resolve(__dirname, '..', '..', '..', 'extensions', 'openshell', 'package.json');
-  const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8')) as { openshellVersion: string };
+  const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
   if (!pkg.openshellVersion) {
     throw new Error('missing "openshellVersion" in extensions/openshell/package.json');
   }
   return pkg.openshellVersion;
 }
 
-async function isAlreadyDownloaded(version: string): Promise<boolean> {
+async function isAlreadyDownloaded(version) {
   const markerPath = resolve(OUTPUT_DIR, VERSION_MARKER);
   if (!existsSync(markerPath)) {
     return false;
@@ -62,18 +56,18 @@ async function isAlreadyDownloaded(version: string): Promise<boolean> {
   return existing.trim() === version;
 }
 
-async function listProviderYamlFiles(version: string): Promise<GitHubContentEntry[]> {
+async function listProviderYamlFiles(version) {
   const url = `https://api.github.com/repos/${REPO}/contents/${PROVIDERS_PATH}?ref=v${version}`;
   const res = await fetch(url, { headers: getAuthHeaders(), redirect: 'follow' });
   if (!res.ok) {
     throw new Error(`failed to list provider profiles at v${version}: ${res.status} ${res.statusText}`);
   }
-  const entries = (await res.json()) as GitHubContentEntry[];
+  const entries = await res.json();
   return entries.filter(entry => entry.type === 'file' && entry.name.endsWith('.yaml'));
 }
 
-async function downloadFile(url: string): Promise<string> {
-  const headers: Record<string, string> = {};
+async function downloadFile(url) {
+  const headers = {};
   const token = process.env['GITHUB_TOKEN'];
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -85,7 +79,7 @@ async function downloadFile(url: string): Promise<string> {
   return res.text();
 }
 
-async function main(): Promise<void> {
+async function main() {
   const version = getOpenshellVersion();
   console.log(`[download-provider-profiles] OpenShell version: v${version}`);
 
@@ -118,7 +112,7 @@ async function main(): Promise<void> {
   console.log(`[download-provider-profiles] done`);
 }
 
-main().catch((err: unknown) => {
+main().catch(err => {
   console.error('[download-provider-profiles]', err);
   process.exit(1);
 });
