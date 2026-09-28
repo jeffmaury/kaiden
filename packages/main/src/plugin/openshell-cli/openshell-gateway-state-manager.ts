@@ -82,7 +82,10 @@ export class OpenshellGatewayStateManager implements Disposable {
               .then(importedProfiles => {
                 const current = this.#gateways.get(gw.name);
                 if (current) {
-                  this.#gateways.set(gw.name, { ...current, importedProfiles });
+                  this.#gateways.set(gw.name, {
+                    ...current,
+                    importedProfiles: [...new Set([...importedProfiles, ...(current.importedProfiles ?? [])])],
+                  });
                   this.#onDidUpdateGateways.fire(this.listGateways());
                 }
               })
