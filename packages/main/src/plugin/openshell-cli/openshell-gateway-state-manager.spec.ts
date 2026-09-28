@@ -96,6 +96,7 @@ test('builds a cached snapshot from registrations and runtime information', asyn
       is_remote: false,
       remote_host: undefined,
       resolved_host: undefined,
+      profilesSynced: false,
       gatewayState: { reachable: true, health: 'healthy' },
     },
     {
@@ -106,6 +107,7 @@ test('builds a cached snapshot from registrations and runtime information', asyn
       is_remote: false,
       remote_host: undefined,
       resolved_host: undefined,
+      profilesSynced: false,
       gatewayState: { reachable: true, health: 'degraded' },
     },
   ]);
@@ -126,6 +128,7 @@ test('marks a gateway unreachable when runtime information cannot be retrieved',
       is_remote: false,
       remote_host: undefined,
       resolved_host: undefined,
+      profilesSynced: false,
       gatewayState: { reachable: false, health: 'unknown', process: { status: 'not-running' } },
     },
   ]);
@@ -309,6 +312,7 @@ test('includes process state with running pid when gateway is reachable', async 
       is_remote: false,
       remote_host: undefined,
       resolved_host: undefined,
+      profilesSynced: false,
       gatewayState: { reachable: true, health: 'healthy', process: { pid: 12345, status: 'running' } },
     },
   ]);
@@ -331,6 +335,7 @@ test('includes process state with running pid when gateway is unreachable', asyn
       is_remote: false,
       remote_host: undefined,
       resolved_host: undefined,
+      profilesSynced: false,
       gatewayState: { reachable: false, health: 'unknown', process: { pid: 12345, status: 'running' } },
     },
   ]);
@@ -353,6 +358,7 @@ test('includes not-running process state when gateway is unreachable and no pid'
       is_remote: false,
       remote_host: undefined,
       resolved_host: undefined,
+      profilesSynced: false,
       gatewayState: { reachable: false, health: 'unknown', process: { status: 'not-running' } },
     },
   ]);
@@ -375,6 +381,7 @@ test('omits process state when gateway is reachable and no pid', async () => {
       is_remote: false,
       remote_host: undefined,
       resolved_host: undefined,
+      profilesSynced: false,
       gatewayState: { reachable: true, health: 'healthy' },
     },
   ]);

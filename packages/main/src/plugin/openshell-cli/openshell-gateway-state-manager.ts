@@ -40,6 +40,7 @@ const MAX_GATEWAY_POLL_INTERVAL_SECONDS = 60 * 60;
 @injectable()
 export class OpenshellGatewayStateManager implements Disposable {
   #gateways = new Map<string, GatewayInfo>();
+  #profilesSynced = new Set<string>();
   #initialized = false;
   #ready = false;
   #pollInterval: NodeJS.Timeout | undefined;
@@ -91,6 +92,17 @@ export class OpenshellGatewayStateManager implements Disposable {
 
   listGateways(): readonly GatewayInfo[] {
     return Array.from(this.#gateways.values());
+  }
+
+  markProfilesSynced(gatewayName: string): void {
+    if (!this.#profilesSynced.has(gatewayName)) {
+      this.#profilesSynced.add(gatewayName);
+      const gateway = this.#gateways.get(gatewayName);
+      if (gateway) {
+        this.#gateways.set(gatewayName, { ...gateway, profilesSynced: true });
+        this.#onDidUpdateGateways.fire(this.listGateways());
+      }
+    }
   }
 
   /** Waits until the initial gateway snapshot has been populated. */
@@ -157,6 +169,7 @@ export class OpenshellGatewayStateManager implements Disposable {
           return {
             ...base,
             ...(driver ? { driver } : {}),
+            profilesSynced: this.#profilesSynced.has(listed.metadata.name),
             gatewayState: {
               reachable: true,
               health: runtimeInfo.status,
@@ -164,9 +177,11 @@ export class OpenshellGatewayStateManager implements Disposable {
             },
           };
         } catch {
+          this.#profilesSynced.delete(listed.metadata.name);
           const processState: GatewayProcessState | undefined = this.deriveProcessState(pid, false);
           return {
             ...base,
+            profilesSynced: false,
             gatewayState: {
               reachable: false,
               health: 'unknown' as const,
