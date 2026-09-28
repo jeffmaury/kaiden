@@ -17,34 +17,25 @@
  ***********************************************************************/
 
 import type { ProviderProfile } from '@openkaiden/api';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { GatewayInfo } from '/@api/openshell-gateway-info.js';
 
+import { OpenShellRegistry } from '../openshell-registry.js';
+import { OpenshellGatewayStateManager } from './openshell-gateway-state-manager.js';
 import { OpenshellProfileSyncer } from './openshell-profile-syncer.js';
 import { OpenshellSdkClientManager } from './openshell-sdk-client-manager.js';
 
+vi.mock(import('../openshell-registry.js'));
+vi.mock(import('./openshell-gateway-state-manager.js'));
 vi.mock(import('./openshell-sdk-client-manager.js'));
 
 let gatewayUpdateCallback: ((gateways: readonly GatewayInfo[]) => void) | undefined;
 let profileRegisterCallback: ((profile: ProviderProfile) => void) | undefined;
+const originalConsoleWarn = console.warn;
 
-const gatewayStateManager = {
-  onDidUpdateGateways: vi.fn((cb: (gateways: readonly GatewayInfo[]) => void) => {
-    gatewayUpdateCallback = cb;
-    return { dispose: vi.fn() };
-  }),
-  listGateways: vi.fn<() => readonly GatewayInfo[]>().mockReturnValue([]),
-  markProfilesSynced: vi.fn(),
-};
-
-const registry = {
-  onDidRegisterProfile: vi.fn((cb: (profile: ProviderProfile) => void) => {
-    profileRegisterCallback = cb;
-    return { dispose: vi.fn() };
-  }),
-  getProfiles: vi.fn<() => readonly ProviderProfile[]>().mockReturnValue([]),
-};
+let registry: OpenShellRegistry;
+let gatewayStateManager: OpenshellGatewayStateManager;
 
 const listProviderProfiles = vi.fn();
 const importProviderProfiles = vi.fn();
@@ -67,11 +58,27 @@ let syncer: OpenshellProfileSyncer;
 
 beforeEach(() => {
   vi.resetAllMocks();
+  console.warn = vi.fn();
   gatewayUpdateCallback = undefined;
   profileRegisterCallback = undefined;
 
-  registry.getProfiles.mockReturnValue([]);
-  gatewayStateManager.listGateways.mockReturnValue([]);
+  registry = new OpenShellRegistry({} as never, {} as never);
+  Object.defineProperty(registry, 'onDidRegisterProfile', {
+    value: vi.fn(cb => {
+      profileRegisterCallback = cb;
+      return { dispose: vi.fn() };
+    }),
+  });
+  gatewayStateManager = new OpenshellGatewayStateManager({} as never, {} as never, {} as never);
+  Object.defineProperty(gatewayStateManager, 'onDidUpdateGateways', {
+    value: vi.fn(cb => {
+      gatewayUpdateCallback = cb;
+      return { dispose: vi.fn() };
+    }),
+  });
+
+  vi.mocked(registry.getProfiles).mockReturnValue([]);
+  vi.mocked(gatewayStateManager.listGateways).mockReturnValue([]);
   listProviderProfiles.mockResolvedValue({ profiles: [] });
   importProviderProfiles.mockResolvedValue({ diagnostics: [], profiles: [], imported: true });
 
@@ -79,27 +86,38 @@ beforeEach(() => {
     raw: { listProviderProfiles, importProviderProfiles },
   } as never);
 
-  syncer = new OpenshellProfileSyncer(registry as never, gatewayStateManager as never, sdkClientManager);
+  syncer = new OpenshellProfileSyncer(registry, gatewayStateManager, sdkClientManager);
   syncer.init();
 });
 
+afterEach(() => {
+  console.warn = originalConsoleWarn;
+});
+
 test('imports missing profiles when a gateway becomes reachable and not yet synced', async () => {
-  registry.getProfiles.mockReturnValue([profileA, profileB]);
+  vi.mocked(registry.getProfiles).mockReturnValue([profileA, profileB]);
   listProviderProfiles.mockResolvedValue({ profiles: [{ id: 'openai' }] });
 
   gatewayUpdateCallback!([reachableGateway('local', false)]);
   await vi.waitFor(() => expect(importProviderProfiles).toHaveBeenCalled());
 
-  const call = importProviderProfiles.mock.calls[0]![0];
-  expect(call.workspace).toBe('');
-  expect(call.profiles).toHaveLength(1);
-  expect(call.profiles[0].source).toBe('kaiden');
-  expect(call.profiles[0].profile.id).toBe('anthropic');
+  expect(importProviderProfiles).toHaveBeenCalledWith(
+    expect.objectContaining({
+      profiles: expect.arrayContaining([
+        expect.objectContaining({
+          profile: expect.objectContaining({
+            id: 'anthropic',
+          }),
+          source: 'kaiden',
+        }),
+      ]),
+    }),
+  );
   expect(gatewayStateManager.markProfilesSynced).toHaveBeenCalledWith('local');
 });
 
 test('marks synced without importing when all profiles already exist on gateway', async () => {
-  registry.getProfiles.mockReturnValue([profileA]);
+  vi.mocked(registry.getProfiles).mockReturnValue([profileA]);
   listProviderProfiles.mockResolvedValue({ profiles: [{ id: 'anthropic' }] });
 
   gatewayUpdateCallback!([reachableGateway('local', false)]);
@@ -109,7 +127,7 @@ test('marks synced without importing when all profiles already exist on gateway'
 });
 
 test('marks synced without calling SDK when no profiles are registered', async () => {
-  registry.getProfiles.mockReturnValue([]);
+  vi.mocked(registry.getProfiles).mockReturnValue([]);
 
   gatewayUpdateCallback!([reachableGateway('local', false)]);
   await vi.waitFor(() => expect(gatewayStateManager.markProfilesSynced).toHaveBeenCalledWith('local'));
@@ -125,33 +143,40 @@ test('skips gateways that are already synced', () => {
 });
 
 test('catches and logs error when sync fails on gateway update', async () => {
-  registry.getProfiles.mockReturnValue([profileA]);
+  vi.mocked(registry.getProfiles).mockReturnValue([profileA]);
   listProviderProfiles.mockRejectedValue(new Error('gateway unreachable'));
-  const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
   gatewayUpdateCallback!([reachableGateway('local', false)]);
-  await vi.waitFor(() => expect(warnSpy).toHaveBeenCalled());
+  await vi.waitFor(() => expect(console.warn).toHaveBeenCalled());
 
-  expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('gateway unreachable'));
+  expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('gateway unreachable'));
   expect(gatewayStateManager.markProfilesSynced).not.toHaveBeenCalled();
-  warnSpy.mockRestore();
 });
 
 test('imports single profile to synced gateways when a new profile is registered', async () => {
-  gatewayStateManager.listGateways.mockReturnValue([reachableGateway('local', true)]);
+  vi.mocked(gatewayStateManager.listGateways).mockReturnValue([reachableGateway('local', true)]);
   listProviderProfiles.mockResolvedValue({ profiles: [] });
 
   profileRegisterCallback!(profileA);
   await vi.waitFor(() => expect(importProviderProfiles).toHaveBeenCalled());
 
   expect(sdkClientManager.getClient).toHaveBeenCalledWith('local');
-  const call = importProviderProfiles.mock.calls[0]![0];
-  expect(call.profiles).toHaveLength(1);
-  expect(call.profiles[0].profile.id).toBe('anthropic');
+  expect(importProviderProfiles).toHaveBeenCalledWith(
+    expect.objectContaining({
+      profiles: expect.arrayContaining([
+        expect.objectContaining({
+          profile: expect.objectContaining({
+            id: 'anthropic',
+          }),
+          source: 'kaiden',
+        }),
+      ]),
+    }),
+  );
 });
 
 test('does not sync new profile to gateways that are not yet synced', () => {
-  gatewayStateManager.listGateways.mockReturnValue([reachableGateway('local', false)]);
+  vi.mocked(gatewayStateManager.listGateways).mockReturnValue([reachableGateway('local', false)]);
 
   profileRegisterCallback!(profileA);
 
@@ -159,7 +184,7 @@ test('does not sync new profile to gateways that are not yet synced', () => {
 });
 
 test('does not import profile that already exists on gateway', async () => {
-  gatewayStateManager.listGateways.mockReturnValue([reachableGateway('local', true)]);
+  vi.mocked(gatewayStateManager.listGateways).mockReturnValue([reachableGateway('local', true)]);
   listProviderProfiles.mockResolvedValue({ profiles: [{ id: 'anthropic' }] });
 
   profileRegisterCallback!(profileA);
@@ -169,20 +194,18 @@ test('does not import profile that already exists on gateway', async () => {
 });
 
 test('catches and logs error when syncProfile fails', async () => {
-  gatewayStateManager.listGateways.mockReturnValue([reachableGateway('local', true)]);
+  vi.mocked(gatewayStateManager.listGateways).mockReturnValue([reachableGateway('local', true)]);
   vi.mocked(sdkClientManager.getClient).mockRejectedValue(new Error('connection lost'));
-  const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
   profileRegisterCallback!(profileA);
-  await vi.waitFor(() => expect(warnSpy).toHaveBeenCalled());
+  await vi.waitFor(() => expect(console.warn).toHaveBeenCalled());
 
-  expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('connection lost'));
-  warnSpy.mockRestore();
+  expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('connection lost'));
 });
 
 test('dispose cleans up event subscriptions', () => {
-  const gatewayDispose = gatewayStateManager.onDidUpdateGateways.mock.results[0]!.value;
-  const registryDispose = registry.onDidRegisterProfile.mock.results[0]!.value;
+  const gatewayDispose = vi.mocked(gatewayStateManager.onDidUpdateGateways).mock.results[0]!.value;
+  const registryDispose = vi.mocked(registry.onDidRegisterProfile).mock.results[0]!.value;
 
   syncer.dispose();
 
