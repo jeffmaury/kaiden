@@ -79,7 +79,6 @@ import { OpenshellGatewayStateManager } from '/@/plugin/openshell-cli/openshell-
 import { OpenshellImageBuilder } from '/@/plugin/openshell-cli/openshell-image-builder.js';
 import { OpenshellNetworkPolicy } from '/@/plugin/openshell-cli/openshell-network-policy.js';
 import { OpenshellPolicyManager } from '/@/plugin/openshell-cli/openshell-policy-manager.js';
-import { OpenshellProfileSyncer } from '/@/plugin/openshell-cli/openshell-profile-syncer.js';
 import { OpenshellSdkClientManager } from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
 import { OpenShellRegistry } from '/@/plugin/openshell-registry.js';
 import { RagEnvironmentRegistry } from '/@/plugin/rag-environment-registry.js';
@@ -620,7 +619,6 @@ export class PluginSystem {
     container.bind<OpenshellSdkClientManager>(OpenshellSdkClientManager).toSelf().inSingletonScope();
     container.bind<OpenshellGateway>(OpenshellGateway).toSelf().inSingletonScope();
     container.bind<OpenshellGatewayStateManager>(OpenshellGatewayStateManager).toSelf().inSingletonScope();
-    container.bind<OpenshellProfileSyncer>(OpenshellProfileSyncer).toSelf().inSingletonScope();
     container.bind<OpenshellImageBuilder>(OpenshellImageBuilder).toSelf().inSingletonScope();
     container.bind<AgentWorkspaceManager>(AgentWorkspaceManager).toSelf().inSingletonScope();
     container.bind(SelectableProviderFactoryToken).to(GcloudAdcProviderFactory).inSingletonScope();
@@ -730,8 +728,6 @@ export class PluginSystem {
 
     const secretManager = container.get<SecretManager>(SecretManager);
     secretManager.init();
-    const openshellProfileSyncer = container.get<OpenshellProfileSyncer>(OpenshellProfileSyncer);
-    openshellProfileSyncer.init();
     const onboardingInit = container.get<OnboardingInit>(OnboardingInit);
     onboardingInit.init();
 
