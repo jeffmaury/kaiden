@@ -48,7 +48,7 @@ const profileB = { id: 'openai' } as ProviderProfile;
 function reachableGateway(name: string, synced: boolean): GatewayInfo {
   return {
     name,
-    endpoint: `http://127.0.0.1:17670`,
+    endpoint: 'http://127.0.0.1:17670',
     gatewayState: { reachable: true, health: 'healthy' },
     profilesSynced: synced,
   };

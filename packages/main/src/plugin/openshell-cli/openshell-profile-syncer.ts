@@ -59,7 +59,7 @@ export class OpenshellProfileSyncer implements Disposable {
       this.registry.onDidRegisterProfile((profile: ProviderProfile) => {
         const syncedGateways = this.gatewayStateManager
           .listGateways()
-          .filter(gw => gw.gatewayState?.reachable && gw.profilesSynced);
+          .filter(gw => gw.gatewayState?.reachable);
         for (const gw of syncedGateways) {
           this.syncProfile(profile, gw.name).catch((err: unknown) => {
             console.warn(
@@ -79,7 +79,7 @@ export class OpenshellProfileSyncer implements Disposable {
     }
 
     const client = await this.sdkClientManager.getClient(gatewayName);
-    const { profiles: existingProfiles } = await client.raw.listProviderProfiles({ workspace: '' });
+    const { profiles: existingProfiles } = await client.raw.listProviderProfiles({ workspace: 'default' });
     const existingIds = new Set(existingProfiles.map(p => p.id));
 
     const missingProfiles = registeredProfiles.filter(p => !existingIds.has(p.id));
@@ -89,6 +89,9 @@ export class OpenshellProfileSyncer implements Disposable {
       );
 
       const response = await client.raw.importProviderProfiles({ profiles: importItems, workspace: '' });
+      if (!response.imported) {
+        throw new Error(`Error while importing provider profiles on gateway: ${gatewayName}`);
+      }
       for (const d of response.diagnostics) {
         console.warn(`[openshell-profile-syncer] import diagnostic for "${d.profileId}": ${d.message}`);
       }
@@ -105,6 +108,9 @@ export class OpenshellProfileSyncer implements Disposable {
 
     const importItem = create(ProviderProfileImportItemSchema, { profile, source: 'kaiden' });
     const response = await client.raw.importProviderProfiles({ profiles: [importItem], workspace: '' });
+    if (!response.imported) {
+      throw new Error(`Error while importing provider profile ${profile.id} on gateway: ${gatewayName}`);
+    }
     for (const d of response.diagnostics) {
       console.warn(`[openshell-profile-syncer] import diagnostic for "${d.profileId}": ${d.message}`);
     }
