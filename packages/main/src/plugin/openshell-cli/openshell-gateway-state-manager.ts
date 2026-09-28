@@ -243,7 +243,7 @@ export class OpenshellGatewayStateManager implements Disposable {
       const importItems = toImport.map(profile =>
         create(ProviderProfileImportItemSchema, { profile, source: 'kaiden' }),
       );
-      const response = await client.raw.importProviderProfiles({ profiles: importItems, workspace: '' });
+      const response = await client.raw.importProviderProfiles({ profiles: importItems, workspace: 'default' });
       if (!response.imported) {
         throw new Error(`Error while importing provider profiles on gateway: ${gateway.name}`);
       }
