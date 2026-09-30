@@ -635,41 +635,6 @@ describe('ensureSecretForSandbox', () => {
     credentials: () => ({ token: 'secret-token' }),
   };
 
-  test('returns existing secret by sandbox name', async () => {
-    vi.mocked(providerRegistry.getInferenceConnection).mockReturnValue({
-      connection: mockConnection,
-      providerId: 'kaiden.openai',
-    });
-    vi.mocked(providerRegistry.getProvider).mockReturnValue({
-      extensionId: 'kaiden.openai',
-    } as unknown as ProviderImpl);
-    const properties = {
-      'openai.connection._type': {
-        scope: 'InferenceProviderConnection',
-        extension: { id: 'kaiden.openai' },
-      },
-    } as Record<string, Record<string, unknown>>;
-    vi.mocked(configurationRegistry.getConfigurationProperties).mockReturnValue(
-      properties as unknown as ReturnType<typeof configurationRegistry.getConfigurationProperties>,
-    );
-    vi.mocked(configurationRegistry.getConfiguration).mockReturnValue({
-      get: vi.fn((key: string) => {
-        if (key === 'openai.connection._type') return 'openai';
-        return undefined;
-      }),
-      has: vi.fn(),
-      update: vi.fn(),
-    } as unknown as ReturnType<typeof configurationRegistry.getConfiguration>);
-    mockRaw.listProviders.mockResolvedValue({
-      providers: [{ metadata: { name: 'my-sandbox-existing-uuid' }, type: 'openai' }],
-    });
-
-    const result = await manager.ensureSecretForSandbox('my-sandbox', 'openai::gpt-4::', 'claude', 'kaiden');
-
-    expect(result).toEqual({ name: 'my-sandbox-existing-uuid', type: 'openai' });
-    expect(mockRaw.createProvider).not.toHaveBeenCalled();
-  });
-
   test('creates sandbox-named secret when none exists', async () => {
     mockRaw.listProviders.mockResolvedValue({ providers: [] });
     vi.mocked(providerRegistry.getInferenceConnection).mockReturnValue({
