@@ -541,7 +541,7 @@ export class AgentWorkspaceManager implements Disposable {
 
   /**
    * Ensure a secret exists for the sandbox. The secret is named
-   * `$sandboxName-secret` and linked to the sandbox rather than
+   * `$sandboxName-$uuid` and linked to the sandbox rather than
    * the inference connection.
    */
   async ensureModelSecret(

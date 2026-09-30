@@ -143,11 +143,11 @@ export class SecretManager {
 
   /**
    * Ensure a secret exists for a sandbox. The secret is named
-   * `$sandboxName-secret` and is linked to the sandbox rather than
+   * `$sandboxName-$uuid` and is linked to the sandbox rather than
    * the inference connection.
    *
-   * When the provider profile restricts binaries, the profile is
-   * cloned with the agent command added so the sandbox can run it.
+   * The provider profile is always cloned
+   * with the agent command added so the sandbox can run it.
    */
   async ensureSecretForSandbox(
     sandboxName: string,
