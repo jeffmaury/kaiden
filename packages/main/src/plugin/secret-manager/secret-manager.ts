@@ -177,15 +177,8 @@ export class SecretManager {
     const secretType = config.get<string>(typeEntry[0]);
     if (!secretType) return undefined;
 
-    const existingSecrets = await this.list(gateway);
-    const existing = existingSecrets.find(s => s.name.startsWith(`${sandboxName}-`));
-    if (existing) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars, sonarjs/no-unused-vars -- gateway is intentionally omitted
-      const { gateway: _, ...secretInfo } = existing;
-      return secretInfo;
-    }
-
     const uuid = randomUUID();
+    const secretName = `${sandboxName}-${uuid}`;
 
     const resolvedType = await this.resolveProfileForAgent(
       secretType,
@@ -198,7 +191,6 @@ export class SecretManager {
 
     const secretValue = await this.buildSecretValue(config, connectionProperties, provider);
 
-    const secretName = `${sandboxName}-${uuid}`;
     await this.create(
       {
         name: secretName,
