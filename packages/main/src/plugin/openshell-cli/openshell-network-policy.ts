@@ -17,6 +17,7 @@
  ***********************************************************************/
 
 import { isIPv6 } from 'node:net';
+import { matchesGlob } from 'node:path';
 
 import { create, type MessageInitShape } from '@bufbuild/protobuf';
 import {
@@ -26,7 +27,6 @@ import {
   type SandboxPolicySchema,
 } from '@nvidia/openshell-sdk/raw';
 import { injectable } from 'inversify';
-import { minimatch } from 'minimatch';
 
 import type { NetworkConfiguration } from '/@api/agent-workspace-info.js';
 
@@ -64,7 +64,7 @@ export class OpenshellNetworkPolicy {
       if (!b.includes('*')) {
         return b === agentBinary;
       }
-      return minimatch(agentBinary, b);
+      return matchesGlob(agentBinary, b);
     });
   }
 
