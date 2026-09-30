@@ -55,21 +55,19 @@ import { getSandboxNameValidationError } from '/@api/agent-workspace-info.js';
 import { ApiSenderType } from '/@api/api-sender/api-sender-type.js';
 import type { IConfigurationNode } from '/@api/configuration/models.js';
 import { IConfigurationRegistry } from '/@api/configuration/models.js';
-import type {
+import {
+  AGENT_LABEL,
   CreateLocalGatewayOptions,
+  decodeWorkspaceLabels,
+  DEFAULT_WORKSPACE,
   GatewayInfo,
   GatewaySandboxes,
   OpenshellBindMount,
   OpenshellUpload,
-  SandboxInfo,
-} from '/@api/openshell-gateway-info.js';
-import {
-  AGENT_LABEL,
-  decodeWorkspaceLabels,
   PROFILE_LABEL,
+  SandboxInfo,
   SECRET_LABEL,
-  WORKSPACE_LABEL,
-} from '/@api/openshell-gateway-info.js';
+  WORKSPACE_LABEL} from '/@api/openshell-gateway-info.js';
 import { TerminalSettings } from '/@api/terminal/terminal-settings.js';
 
 import { dedupeOpenshellMounts, partitionOpenshellUploads, resolveOpenshellMountTarget } from './openshell-mounts.js';
@@ -722,7 +720,9 @@ export class AgentWorkspaceManager implements Disposable {
     for (const gateway of gateways) {
       try {
         const client = await this.openshellSdkClientManager.getClient(gateway.name);
-        const refs = client.sandbox.list();
+        const refs = client.sandbox.list({
+          workspace: DEFAULT_WORKSPACE,
+        });
         const sandboxes: SandboxInfo[] = (await refs.all()).map(mapSdkSandboxRef);
         for (const sandbox of sandboxes) {
           if (sandbox.labels) {
