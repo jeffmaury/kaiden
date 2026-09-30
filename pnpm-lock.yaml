@@ -135,9 +135,6 @@ importers:
       mime-types:
         specifier: ^3.0.1
         version: 3.0.2
-      minimatch:
-        specifier: ^10.2.6
-        version: 10.2.6
       minimist:
         specifier: ^1.2.8
         version: 1.2.8
