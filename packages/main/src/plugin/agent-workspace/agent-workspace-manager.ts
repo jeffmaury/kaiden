@@ -67,7 +67,8 @@ import {
   PROFILE_LABEL,
   SandboxInfo,
   SECRET_LABEL,
-  WORKSPACE_LABEL} from '/@api/openshell-gateway-info.js';
+  WORKSPACE_LABEL,
+} from '/@api/openshell-gateway-info.js';
 import { TerminalSettings } from '/@api/terminal/terminal-settings.js';
 
 import { dedupeOpenshellMounts, partitionOpenshellUploads, resolveOpenshellMountTarget } from './openshell-mounts.js';
