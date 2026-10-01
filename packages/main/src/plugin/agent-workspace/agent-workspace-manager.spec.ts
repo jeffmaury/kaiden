@@ -48,7 +48,13 @@ import type { AgentWorkspaceCreateOptions } from '/@api/agent-workspace-info.js'
 import type { ApiSenderType } from '/@api/api-sender/api-sender-type.js';
 import type { IConfigurationRegistry } from '/@api/configuration/models.js';
 import type { GatewayInfo } from '/@api/openshell-gateway-info.js';
-import { AGENT_LABEL, decodeWorkspaceLabels, SECRET_LABEL, WORKSPACE_LABEL } from '/@api/openshell-gateway-info.js';
+import {
+  AGENT_LABEL,
+  decodeWorkspaceLabels,
+  PROFILE_LABEL,
+  SECRET_LABEL,
+  WORKSPACE_LABEL,
+} from '/@api/openshell-gateway-info.js';
 import type { TaskState, TaskStatus } from '/@api/taskInfo.js';
 
 import { AgentWorkspaceManager, encodeWorkspaceLabels } from './agent-workspace-manager.js';
@@ -203,6 +209,7 @@ const openshellGatewayStateManager = {
 const secretManager = {
   create: vi.fn(),
   remove: vi.fn(),
+  removeProfile: vi.fn(),
   init: vi.fn(),
   getSecretForModel: vi.fn(),
   ensureSecretForModel: vi.fn(),
@@ -1697,6 +1704,23 @@ describe('remove', () => {
     await manager.remove('ws-1', 'kaiden');
 
     expect(secretManager.remove).toHaveBeenCalledWith('test-workspace-1-secret', 'kaiden');
+  });
+
+  test('deletes associated profile via PROFILE_LABEL on sandbox removal', async () => {
+    mockSdkListSandboxes([
+      {
+        id: 'ws-1',
+        name: 'test-workspace-1',
+        phase: 'ready',
+        labels: { [PROFILE_LABEL]: 'test-workspace-1-secret' },
+        resourceVersion: '1',
+      },
+    ]);
+    vi.mocked(sdkSandbox.delete).mockResolvedValue(undefined);
+
+    await manager.remove('ws-1', 'kaiden');
+
+    expect(secretManager.removeProfile).toHaveBeenCalledWith('test-workspace-1-secret', 'kaiden');
   });
 
   test('does not fail when secret deletion fails during removal', async () => {
