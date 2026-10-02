@@ -56,7 +56,7 @@ export interface NetworkDestination {
 @injectable()
 export class OpenshellNetworkPolicy {
   extractBinaryFromCommand(command: string): string {
-    return command.trim().split(/\s+/)[0] ?? command.trim();
+    return command.trim().split(/\s+/)[0] as string;
   }
 
   endpointMatchesHost(existingHost: string, targetHost: string): boolean {
@@ -176,7 +176,7 @@ export class OpenshellNetworkPolicy {
           create(NetworkEndpointSchema, {
             host: parsed.host,
             port,
-            protocol: 'rest' as const,
+            protocol: 'rest',
             access: NetworkAccessPreset.FULL,
             allowEncodedSlash: true,
           }),

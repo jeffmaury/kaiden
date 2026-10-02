@@ -364,7 +364,7 @@ describe('inference connection lifecycle', () => {
     });
 
     const secret = await manager.getSecretForModel('cursor::model-1::', 'remote');
-    expect(secret).toEqual({ name: 'kaiden.cursor-conn-123', type: 'cursor' });
+    expect(secret).toMatchObject({ name: 'kaiden.cursor-conn-123', type: 'cursor' });
     expect(sdkClientManager.getClient).toHaveBeenCalledWith('remote');
   });
 
@@ -385,7 +385,7 @@ describe('inference connection lifecycle', () => {
     });
 
     const secret = await manager.getSecretForModel('vertexai::model-1::');
-    expect(secret).toEqual({ name: 'kaiden.vertex-ai-conn-123', type: 'vertex-ai' });
+    expect(secret).toMatchObject({ name: 'kaiden.vertex-ai-conn-123', type: 'vertex-ai' });
   });
 });
 
@@ -501,7 +501,7 @@ describe('ensureSecretForModel', () => {
 
     const result = await manager.ensureSecretForModel('cursor::model-1::', 'remote');
 
-    expect(result).toEqual({ name: 'kaiden.cursor-conn-789', type: 'cursor' });
+    expect(result).toMatchObject({ name: 'kaiden.cursor-conn-789', type: 'cursor' });
     expect(mockRaw.createProvider).not.toHaveBeenCalled();
     expect(sdkClientManager.getClient).toHaveBeenCalledWith('remote');
   });

@@ -17,7 +17,12 @@
  ***********************************************************************/
 
 import { create } from '@bufbuild/protobuf';
-import { NetworkAccessPreset, NetworkEndpointSchema } from '@nvidia/openshell-sdk/raw';
+import {
+  NetworkAccessPreset,
+  NetworkBinarySchema,
+  NetworkEndpointSchema,
+  ProviderProfileSchema,
+} from '@nvidia/openshell-sdk/raw';
 import { inject, injectable, multiInject } from 'inversify';
 
 import { OpenshellNetworkPolicy } from '/@/plugin/openshell-cli/openshell-network-policy.js';
@@ -25,9 +30,9 @@ import { OpenshellSdkClientManager } from '/@/plugin/openshell-cli/openshell-sdk
 import { OpenShellRegistry } from '/@/plugin/openshell-registry.js';
 import { DefaultProviderFactory } from '/@/plugin/secret-manager/default-provider-factory.js';
 import {
-  CreateProfileOptions,
+  type CreateProfileOptions,
   DEFAULT_WORKSPACE,
-  OpenshellProfile,
+  type OpenshellProfile,
   WORKSPACE_SCOPE,
 } from '/@api/openshell-gateway-info.js';
 import type { SecretCliBackend, SecretCreateOptions, SecretInfo, SecretName } from '/@api/secret-info.js';
@@ -120,13 +125,15 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
     if (!baseProfile) {
       throw new Error(`Provider profile "${options.from}" not found`);
     }
-    const cloned = {
+    const cloned = create(ProviderProfileSchema, {
       ...baseProfile,
       id: options.name,
-      binaries: options.binaries.map(b => {
-        return { $typeName: 'openshell.sandbox.v1.NetworkBinary', path: b };
-      }),
-    };
+      binaries: options.binaries.map(b =>
+        create(NetworkBinarySchema, {
+          path: b,
+        }),
+      ),
+    });
     if (options.endpoint) {
       const parsed = this.openshellNetworkPolicy.parseModelEndpoint(options.endpoint);
       if (parsed) {

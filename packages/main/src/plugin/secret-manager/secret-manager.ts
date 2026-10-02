@@ -126,9 +126,7 @@ export class SecretManager {
     const secrets = await this.list(gateway);
     const secret = secrets.find(s => s.name === expectedName);
     if (!secret) return undefined;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars, sonarjs/no-unused-vars -- gateway is intentionally omitted
-    const { gateway: _, ...secretInfo } = secret;
-    return secretInfo;
+    return secret;
   }
 
   async ensureSecretForModel(modelId: string, gateway?: string): Promise<SecretInfo | undefined> {
