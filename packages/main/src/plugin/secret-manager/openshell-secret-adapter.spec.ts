@@ -354,6 +354,93 @@ describe('createProfile', () => {
     );
   });
 
+  test('skips adding endpoint when existing endpoint matches exactly', async () => {
+    const baseEndpoints = [{ host: 'api.openai.com', port: 443 }];
+    vi.mocked(openshellRegistry.getProfiles).mockReturnValue([
+      { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [], endpoints: baseEndpoints },
+    ] as never);
+    mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
+
+    await adapter.createProfile({
+      name: 'openai-clone',
+      from: 'openai',
+      binaries: ['/**/claude'],
+      endpoint: 'https://api.openai.com/v1',
+    });
+
+    expect(mockRaw.importProviderProfiles).toHaveBeenCalledWith(
+      expect.objectContaining({
+        profiles: [
+          expect.objectContaining({
+            profile: expect.objectContaining({
+              endpoints: baseEndpoints,
+            }),
+          }),
+        ],
+      }),
+    );
+  });
+
+  test('skips adding endpoint when existing wildcard host covers it', async () => {
+    const baseEndpoints = [{ host: '*', port: 443 }];
+    vi.mocked(openshellRegistry.getProfiles).mockReturnValue([
+      { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [], endpoints: baseEndpoints },
+    ] as never);
+    mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
+
+    await adapter.createProfile({
+      name: 'openai-clone',
+      from: 'openai',
+      binaries: ['/**/claude'],
+      endpoint: 'https://api.openai.com/v1',
+    });
+
+    expect(mockRaw.importProviderProfiles).toHaveBeenCalledWith(
+      expect.objectContaining({
+        profiles: [
+          expect.objectContaining({
+            profile: expect.objectContaining({
+              endpoints: baseEndpoints,
+            }),
+          }),
+        ],
+      }),
+    );
+  });
+
+  test('adds endpoint when host matches but port differs', async () => {
+    const baseEndpoints = [{ host: 'api.openai.com', port: 80 }];
+    vi.mocked(openshellRegistry.getProfiles).mockReturnValue([
+      { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [], endpoints: baseEndpoints },
+    ] as never);
+    mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
+
+    await adapter.createProfile({
+      name: 'openai-clone',
+      from: 'openai',
+      binaries: ['/**/claude'],
+      endpoint: 'https://api.openai.com/v1',
+    });
+
+    expect(mockRaw.importProviderProfiles).toHaveBeenCalledWith(
+      expect.objectContaining({
+        profiles: [
+          expect.objectContaining({
+            profile: expect.objectContaining({
+              endpoints: expect.arrayContaining([
+                ...baseEndpoints,
+                expect.objectContaining({
+                  host: 'api.openai.com',
+                  port: 443,
+                }),
+              ]),
+            }),
+          }),
+        ],
+      }),
+    );
+  });
+
   test('throws when base profile is not found in registry', async () => {
     vi.mocked(openshellRegistry.getProfiles).mockReturnValue([]);
 
