@@ -130,14 +130,16 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
     if (options.endpoint) {
       const parsed = this.openshellNetworkPolicy.parseModelEndpoint(options.endpoint);
       if (parsed) {
-        const endpointEntry = create(NetworkEndpointSchema, {
-          host: parsed.host,
-          port: parsed.port,
-          protocol: 'rest',
-          access: NetworkAccessPreset.FULL,
-          allowEncodedSlash: true,
-        });
-        cloned.endpoints = [...(baseProfile.endpoints ?? []), endpointEntry];
+        if (!this.openshellNetworkPolicy.isEndpointCovered(baseProfile.endpoints ?? [], parsed)) {
+          const endpointEntry = create(NetworkEndpointSchema, {
+            host: parsed.host,
+            port: parsed.port,
+            protocol: 'rest',
+            access: NetworkAccessPreset.FULL,
+            allowEncodedSlash: true,
+          });
+          cloned.endpoints = [...(baseProfile.endpoints ?? []), endpointEntry];
+        }
       }
     }
     const client = await this.sdkClientManager.getClient(gateway);

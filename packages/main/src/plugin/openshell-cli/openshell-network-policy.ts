@@ -59,6 +59,17 @@ export class OpenshellNetworkPolicy {
     return command.trim().split(/\s+/)[0] ?? command.trim();
   }
 
+  endpointMatchesHost(existingHost: string, targetHost: string): boolean {
+    if (existingHost.includes('*')) {
+      return matchesGlob(targetHost, existingHost);
+    }
+    return existingHost === targetHost;
+  }
+
+  isEndpointCovered(endpoints: readonly NetworkEndpoint[], target: ModelEndpoint): boolean {
+    return endpoints.some(ep => this.endpointMatchesHost(ep.host, target.host) && ep.port === target.port);
+  }
+
   isAgentCommandAllowed(agentBinary: string, binaries: string[]): boolean {
     return binaries.some(b => {
       if (!b.includes('*')) {
