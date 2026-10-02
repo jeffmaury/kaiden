@@ -88,11 +88,6 @@ export const SandboxInfoSchema = z.object({
   resource_version: z.number().optional(),
 });
 
-export const SandboxInfoListSchema = z.looseObject({
-  next_page_token: z.string(),
-  sandboxes: z.array(SandboxInfoSchema),
-});
-
 export type SandboxInfo = z.output<typeof SandboxInfoSchema> & {
   sourcePath?: string;
 };
@@ -197,18 +192,6 @@ export interface GatewaySandboxes {
   gateway: GatewayInfo;
   sandboxes: SandboxInfo[];
 }
-
-export const OpenshellProviderInfoSchema = z.looseObject({
-  name: z.string(),
-  type: z.string(),
-});
-
-export const OpenshellProviderInfoListSchema = z.looseObject({
-  next_page_token: z.string(),
-  providers: z.array(OpenshellProviderInfoSchema),
-});
-
-export type OpenshellProviderInfo = z.output<typeof OpenshellProviderInfoSchema>;
 
 export const OpenshellProfileCredentialSchema = z.looseObject({
   name: z.string(),

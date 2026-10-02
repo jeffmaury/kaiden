@@ -26,7 +26,7 @@ import type { OpenshellProfile } from './openshell-gateway-info.js';
 export type SecretName = components['schemas']['SecretName'];
 
 /**
- * Secret metadata returned by `kdn secret list`.
+ * Secret metadata`.
  */
 export type SecretInfo = {
   type: string;
