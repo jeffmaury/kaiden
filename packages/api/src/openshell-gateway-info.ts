@@ -244,11 +244,6 @@ export interface CreateProviderOptions {
   env?: Record<string, string>;
 }
 
-export interface SetInferenceOptions {
-  provider: string;
-  model: string;
-}
-
 // ── Gateway metadata (on-disk config folder schema) ───────────────────
 
 export const GatewayMetadataSourceSchema = z.enum(['user', 'system']);
