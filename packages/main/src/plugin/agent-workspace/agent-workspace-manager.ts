@@ -315,68 +315,79 @@ export class AgentWorkspaceManager implements Disposable {
     const t0 = performance.now();
 
     const sdkClient = await this.openshellSdkClientManager.getClient(options.gateway);
-    await sdkClient.sandbox.create({
-      name: sandboxName,
-      image: effectiveImage,
-      providers: options.secrets,
-      environment: env && Object.keys(env).length > 0 ? env : undefined,
-      labels: {
-        gateway: options.gateway,
-        ...(options.sourcePath ? encodeWorkspaceLabels(options.sourcePath) : {}),
-        [AGENT_LABEL]: options.agent,
-        ...(secretName ? { [SECRET_LABEL]: secretName } : {}),
-        ...(profileName ? { [PROFILE_LABEL]: profileName } : {}),
-      },
-      tty: true,
-      rawSpec:
-        gateway.driver && mounts.length > 0
-          ? {
-              template: {
-                image: effectiveImage,
-                driverConfig: { [gateway.driver]: { mounts: mounts.map(mount => ({ ...mount })) } },
-              },
-            }
-          : undefined,
-    });
-    // Show phase for provisioning now then create will refreshes the ready or error phase later
-    this.apiSender.send('agent-workspace-update');
-    const sandboxRef = await sdkClient.sandbox.waitReady(sandboxName, SANDBOX_READY_TIMEOUT_SECONDS);
-    const tSandbox = performance.now();
-    console.log(`[workspace-timing] createSandbox: ${(tSandbox - t0).toFixed(0)}ms`);
-
     try {
-      for (const upload of uploads) {
-        await this.openshellCli.uploadToSandbox(sandboxName, upload.local, upload.remote, options.gateway);
-      }
+      await sdkClient.sandbox.create({
+        name: sandboxName,
+        image: effectiveImage,
+        providers: options.secrets,
+        environment: env && Object.keys(env).length > 0 ? env : undefined,
+        labels: {
+          gateway: options.gateway,
+          ...(options.sourcePath ? encodeWorkspaceLabels(options.sourcePath) : {}),
+          [AGENT_LABEL]: options.agent,
+          ...(secretName ? { [SECRET_LABEL]: secretName } : {}),
+          ...(profileName ? { [PROFILE_LABEL]: profileName } : {}),
+        },
+        tty: true,
+        rawSpec:
+          gateway.driver && mounts.length > 0
+            ? {
+                template: {
+                  image: effectiveImage,
+                  driverConfig: { [gateway.driver]: { mounts: mounts.map(mount => ({ ...mount })) } },
+                },
+              }
+            : undefined,
+      });
+      // Show phase for provisioning now then create will refreshes the ready or error phase later
+      this.apiSender.send('agent-workspace-update');
+      const sandboxRef = await sdkClient.sandbox.waitReady(sandboxName, SANDBOX_READY_TIMEOUT_SECONDS);
+      const tSandbox = performance.now();
+      console.log(`[workspace-timing] createSandbox: ${(tSandbox - t0).toFixed(0)}ms`);
 
-      const networkPolicy = this.openshellNetworkPolicy.buildPolicyObject(
-        workspace.network,
-        secretName !== undefined ? undefined : endpoint,
-      );
-      if (networkPolicy) {
-        await this.openshellPolicyManager.updatePolicy(sandboxName, networkPolicy, options.gateway);
-      }
-
-      const tPolicy = performance.now();
-      console.log(`[workspace-timing] updatePolicy: ${(tPolicy - tSandbox).toFixed(0)}ms`);
-      console.log(`[workspace-timing] total createOpenshell: ${(tPolicy - t0).toFixed(0)}ms`);
-    } catch (err) {
       try {
-        await sdkClient.sandbox.delete(sandboxName);
-        await sdkClient.sandbox.waitDeleted(sandboxName, SANDBOX_DELETE_TIMEOUT_SECONDS);
-      } catch (cleanupError) {
-        const detail = err instanceof Error ? err.message : String(err);
-        const cleanupDetail = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
-        throw new Error(`${detail}; failed to clean up sandbox "${sandboxName}": ${cleanupDetail}`, { cause: err });
-      }
-      throw err;
-    }
+        for (const upload of uploads) {
+          await this.openshellCli.uploadToSandbox(sandboxName, upload.local, upload.remote, options.gateway);
+        }
 
-    // the agent lifecycle belongs to the workspace: start it now so the terminal only has to attach
-    try {
-      await this.ensureAgentSession(sandboxRef.id, sandboxName, options.gateway, async () => agent.command);
-    } catch (err: unknown) {
-      console.warn(`[AgentWorkspace] unable to start agent in workspace "${sandboxName}":`, err);
+        const networkPolicy = this.openshellNetworkPolicy.buildPolicyObject(
+          workspace.network,
+          secretName !== undefined ? undefined : endpoint,
+        );
+        if (networkPolicy) {
+          await this.openshellPolicyManager.updatePolicy(sandboxName, networkPolicy, options.gateway);
+        }
+
+        const tPolicy = performance.now();
+        console.log(`[workspace-timing] updatePolicy: ${(tPolicy - tSandbox).toFixed(0)}ms`);
+        console.log(`[workspace-timing] total createOpenshell: ${(tPolicy - t0).toFixed(0)}ms`);
+      } catch (err) {
+        try {
+          await sdkClient.sandbox.delete(sandboxName);
+          await sdkClient.sandbox.waitDeleted(sandboxName, SANDBOX_DELETE_TIMEOUT_SECONDS);
+        } catch (cleanupError) {
+          const detail = err instanceof Error ? err.message : String(err);
+          const cleanupDetail = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
+          throw new Error(`${detail}; failed to clean up sandbox "${sandboxName}": ${cleanupDetail}`, { cause: err });
+        }
+        throw err;
+      }
+
+      // the agent lifecycle belongs to the workspace: start it now so the terminal only has to attach
+      try {
+        await this.ensureAgentSession(sandboxRef.id, sandboxName, options.gateway, async () => agent.command);
+      } catch (agentErr: unknown) {
+        console.warn(`[AgentWorkspace] unable to start agent in workspace "${sandboxName}":`, agentErr);
+      }
+    } catch (err) {
+      await this.deleteAssociatedSecret(
+        {
+          ...(secretName ? { [SECRET_LABEL]: secretName } : {}),
+          ...(profileName ? { [PROFILE_LABEL]: profileName } : {}),
+        },
+        options.gateway,
+      );
+      throw err;
     }
 
     return { id: sandboxName };

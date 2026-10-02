@@ -1113,6 +1113,34 @@ describe('create – OpenShell mode', () => {
     expect(mockTask.error).toContain('deletion timed out');
   });
 
+  test('cleans up secret and profile when sandbox readiness fails', async () => {
+    vi.mocked(secretManager.ensureSecretForSandbox).mockResolvedValue({
+      name: 'my-sandbox-secret',
+      type: 'my-sandbox-profile',
+    });
+    vi.mocked(sdkSandbox.waitReady).mockRejectedValue(new Error('timed out'));
+
+    await expect(manager.create(defaultOptions)).rejects.toThrow('timed out');
+
+    expect(secretManager.remove).toHaveBeenCalledWith('my-sandbox-secret', 'kaiden');
+    expect(secretManager.removeProfile).toHaveBeenCalledWith('my-sandbox-profile', 'kaiden');
+    expect(sdkSandbox.delete).not.toHaveBeenCalled();
+  });
+
+  test('cleans up secret and profile when upload fails', async () => {
+    vi.mocked(secretManager.ensureSecretForSandbox).mockResolvedValue({
+      name: 'my-sandbox-secret',
+      type: 'my-sandbox-profile',
+    });
+    vi.mocked(openshellCli.uploadToSandbox).mockRejectedValue(new Error('upload failed'));
+
+    await expect(manager.create(defaultOptions)).rejects.toThrow('upload failed');
+
+    expect(sdkSandbox.delete).toHaveBeenCalledWith('my-sandbox');
+    expect(secretManager.remove).toHaveBeenCalledWith('my-sandbox-secret', 'kaiden');
+    expect(secretManager.removeProfile).toHaveBeenCalledWith('my-sandbox-profile', 'kaiden');
+  });
+
   test('emits agent-workspace-update even when creation fails', async () => {
     const options = {
       ...defaultOptions,
