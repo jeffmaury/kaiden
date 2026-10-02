@@ -24,7 +24,7 @@ import type { OpenShellClient } from '@nvidia/openshell-sdk';
 import { ProviderCredentialRefreshStrategy } from '@nvidia/openshell-sdk/raw';
 import { injectable } from 'inversify';
 
-import { DEFAULT_WORKSPACE } from '/@api/openshell-gateway-info.js';
+import { DEFAULT_WORKSPACE, WORKSPACE_SCOPE } from '/@api/openshell-gateway-info.js';
 import type { SecretCreateOptions } from '/@api/secret-info.js';
 
 import type { SelectableProviderFactory } from './provider-factory.js';
@@ -42,7 +42,7 @@ export class GcloudAdcProviderFactory implements SelectableProviderFactory {
       id: options.type,
       workspaceScope: {
         selection: {
-          case: 'workspace',
+          case: WORKSPACE_SCOPE,
           value: DEFAULT_WORKSPACE,
         },
       },
@@ -68,7 +68,7 @@ export class GcloudAdcProviderFactory implements SelectableProviderFactory {
       },
       workspaceScope: {
         selection: {
-          case: 'workspace',
+          case: WORKSPACE_SCOPE,
           value: DEFAULT_WORKSPACE,
         },
       },
@@ -88,7 +88,7 @@ export class GcloudAdcProviderFactory implements SelectableProviderFactory {
         secretMaterialKeys: ['client_secret', 'refresh_token'],
         workspaceScope: {
           selection: {
-            case: 'workspace',
+            case: WORKSPACE_SCOPE,
             value: DEFAULT_WORKSPACE,
           },
         },
@@ -99,7 +99,7 @@ export class GcloudAdcProviderFactory implements SelectableProviderFactory {
         credentialKey,
         workspaceScope: {
           selection: {
-            case: 'workspace',
+            case: WORKSPACE_SCOPE,
             value: DEFAULT_WORKSPACE,
           },
         },
@@ -110,7 +110,7 @@ export class GcloudAdcProviderFactory implements SelectableProviderFactory {
           name: options.name,
           workspaceScope: {
             selection: {
-              case: 'workspace',
+              case: WORKSPACE_SCOPE,
               value: DEFAULT_WORKSPACE,
             },
           },

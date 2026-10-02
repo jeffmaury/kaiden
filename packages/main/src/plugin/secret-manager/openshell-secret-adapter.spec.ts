@@ -22,7 +22,7 @@ import { beforeEach, describe, expect, type Mock, test, vi } from 'vitest';
 import { OpenshellNetworkPolicy } from '/@/plugin/openshell-cli/openshell-network-policy.js';
 import { OpenshellSdkClientManager } from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
 import type { OpenShellRegistry } from '/@/plugin/openshell-registry.js';
-import { DEFAULT_WORKSPACE } from '/@api/openshell-gateway-info.js';
+import { DEFAULT_WORKSPACE, WORKSPACE_SCOPE } from '/@api/openshell-gateway-info.js';
 import type { SecretCreateOptions } from '/@api/secret-info.js';
 
 import { DefaultProviderFactory } from './default-provider-factory.js';
@@ -143,7 +143,7 @@ describe('listSecrets', () => {
     expect(mockRaw.listProviders).toHaveBeenCalledWith({
       workspaceScope: {
         selection: {
-          case: 'workspace',
+          case: WORKSPACE_SCOPE,
           value: DEFAULT_WORKSPACE,
         },
       },
@@ -187,7 +187,7 @@ describe('removeSecret', () => {
       name: 'my-openai',
       workspaceScope: {
         selection: {
-          case: 'workspace',
+          case: WORKSPACE_SCOPE,
           value: DEFAULT_WORKSPACE,
         },
       },
@@ -234,7 +234,7 @@ describe('listServices', () => {
     expect(mockRaw.listProviderProfiles).toHaveBeenCalledWith({
       workspaceScope: {
         selection: {
-          case: 'workspace',
+          case: WORKSPACE_SCOPE,
           value: DEFAULT_WORKSPACE,
         },
       },
@@ -374,7 +374,7 @@ describe('deleteProfile', () => {
       allowMissing: true,
       workspaceScope: {
         selection: {
-          case: 'workspace',
+          case: WORKSPACE_SCOPE,
           value: DEFAULT_WORKSPACE,
         },
       },

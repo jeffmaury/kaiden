@@ -34,7 +34,7 @@ import type { ProviderRegistry } from '/@/plugin/provider-registry.js';
 import type { SafeStorageRegistry } from '/@/plugin/safe-storage/safe-storage-registry.js';
 import type { ApiSenderType } from '/@api/api-sender/api-sender-type.js';
 import type { IConfigurationRegistry } from '/@api/configuration/models.js';
-import { DEFAULT_WORKSPACE } from '/@api/openshell-gateway-info.js';
+import { DEFAULT_WORKSPACE, WORKSPACE_SCOPE } from '/@api/openshell-gateway-info.js';
 import type { SecretCreateOptions } from '/@api/secret-info.js';
 
 import { DefaultProviderFactory } from './default-provider-factory.js';
@@ -218,7 +218,7 @@ describe('openshellAdapter', () => {
       },
       workspaceScope: {
         selection: {
-          case: 'workspace',
+          case: WORKSPACE_SCOPE,
           value: DEFAULT_WORKSPACE,
         },
       },
@@ -291,7 +291,7 @@ describe('openshellAdapter', () => {
       name: 'my-openai',
       workspaceScope: {
         selection: {
-          case: 'workspace',
+          case: WORKSPACE_SCOPE,
           value: DEFAULT_WORKSPACE,
         },
       },
@@ -453,7 +453,7 @@ describe('createSecretForConnection', () => {
       },
       workspaceScope: {
         selection: {
-          case: 'workspace',
+          case: WORKSPACE_SCOPE,
           value: DEFAULT_WORKSPACE,
         },
       },
@@ -558,7 +558,7 @@ describe('ensureSecretForModel', () => {
       },
       workspaceScope: {
         selection: {
-          case: 'workspace',
+          case: WORKSPACE_SCOPE,
           value: DEFAULT_WORKSPACE,
         },
       },
@@ -720,7 +720,7 @@ describe('resolveProfileForAgent', () => {
         ],
         workspaceScope: {
           selection: {
-            case: 'workspace',
+            case: WORKSPACE_SCOPE,
             value: DEFAULT_WORKSPACE,
           },
         },
@@ -749,7 +749,7 @@ describe('resolveProfileForAgent', () => {
         ],
         workspaceScope: {
           selection: {
-            case: 'workspace',
+            case: WORKSPACE_SCOPE,
             value: DEFAULT_WORKSPACE,
           },
         },
@@ -817,7 +817,7 @@ describe('resolveProfileForAgent', () => {
         ],
         workspaceScope: {
           selection: {
-            case: 'workspace',
+            case: WORKSPACE_SCOPE,
             value: DEFAULT_WORKSPACE,
           },
         },
@@ -854,7 +854,7 @@ describe('resolveProfileForAgent', () => {
         ],
         workspaceScope: {
           selection: {
-            case: 'workspace',
+            case: WORKSPACE_SCOPE,
             value: DEFAULT_WORKSPACE,
           },
         },
@@ -885,7 +885,7 @@ describe('resolveProfileForAgent', () => {
         ],
         workspaceScope: {
           selection: {
-            case: 'workspace',
+            case: WORKSPACE_SCOPE,
             value: DEFAULT_WORKSPACE,
           },
         },

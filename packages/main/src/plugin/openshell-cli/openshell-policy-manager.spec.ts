@@ -19,7 +19,7 @@
 import { PolicyStatus } from '@nvidia/openshell-sdk/raw';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import { DEFAULT_WORKSPACE } from '/@api/openshell-gateway-info.js';
+import { DEFAULT_WORKSPACE, WORKSPACE_SCOPE } from '/@api/openshell-gateway-info.js';
 
 import { OpenshellNetworkPolicy } from './openshell-network-policy.js';
 import { OpenshellPolicyManager } from './openshell-policy-manager.js';
@@ -74,7 +74,7 @@ test('preserves existing policy and applies structured network and model rules o
       version: 7,
       workspaceScope: {
         selection: {
-          case: 'workspace',
+          case: WORKSPACE_SCOPE,
           value: DEFAULT_WORKSPACE,
         },
       },
