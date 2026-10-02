@@ -16,7 +16,9 @@
  * SPDX-License-Identifier: Apache-2.0
  ***********************************************************************/
 
+import { create } from '@bufbuild/protobuf';
 import type { OpenShellClient } from '@nvidia/openshell-sdk';
+import { NetworkEndpointSchema } from '@nvidia/openshell-sdk/raw';
 import { beforeEach, describe, expect, type Mock, test, vi } from 'vitest';
 
 import { OpenshellNetworkPolicy } from '/@/plugin/openshell-cli/openshell-network-policy.js';
@@ -272,7 +274,7 @@ describe('listServices', () => {
 
 describe('createProfile', () => {
   test('cloned profile keeps base endpoints when no endpoint option is provided', async () => {
-    const baseEndpoints = [{ host: 'api.openai.com', port: 443 }];
+    const baseEndpoints = [create(NetworkEndpointSchema, { host: 'api.openai.com', port: 443 })];
     vi.mocked(openshellRegistry.getProfiles).mockReturnValue([
       { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [], endpoints: baseEndpoints },
     ] as never);
@@ -328,7 +330,7 @@ describe('createProfile', () => {
   });
 
   test('does not modify endpoints when endpoint URL is invalid', async () => {
-    const baseEndpoints = [{ host: 'api.openai.com', port: 443 }];
+    const baseEndpoints = [create(NetworkEndpointSchema, { host: 'api.openai.com', port: 443 })];
     vi.mocked(openshellRegistry.getProfiles).mockReturnValue([
       { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [], endpoints: baseEndpoints },
     ] as never);
@@ -355,7 +357,7 @@ describe('createProfile', () => {
   });
 
   test('skips adding endpoint when existing endpoint matches exactly', async () => {
-    const baseEndpoints = [{ host: 'api.openai.com', port: 443 }];
+    const baseEndpoints = [create(NetworkEndpointSchema, { host: 'api.openai.com', port: 443 })];
     vi.mocked(openshellRegistry.getProfiles).mockReturnValue([
       { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [], endpoints: baseEndpoints },
     ] as never);
@@ -382,7 +384,7 @@ describe('createProfile', () => {
   });
 
   test('skips adding endpoint when existing wildcard host covers it', async () => {
-    const baseEndpoints = [{ host: '*', port: 443 }];
+    const baseEndpoints = [create(NetworkEndpointSchema, { host: '*', port: 443 })];
     vi.mocked(openshellRegistry.getProfiles).mockReturnValue([
       { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [], endpoints: baseEndpoints },
     ] as never);
