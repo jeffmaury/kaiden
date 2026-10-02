@@ -26,7 +26,7 @@ export interface SecretName {
 }
 
 /**
- * Secret metadata returned by secret list commands.
+ * Secret metadata`.
  */
 export type SecretInfo = {
   type: string;
