@@ -19,7 +19,7 @@
 import type { OpenShellClient } from '@nvidia/openshell-sdk';
 import { beforeEach, describe, expect, type Mock, test, vi } from 'vitest';
 
-import { DEFAULT_WORKSPACE } from '/@api/openshell-gateway-info.js';
+import { DEFAULT_WORKSPACE, WORKSPACE_SCOPE } from '/@api/openshell-gateway-info.js';
 import type { SecretCreateOptions } from '/@api/secret-info.js';
 
 import { GcloudAdcProviderFactory, readGcloudAdc } from './gcloud-adc-provider-factory.js';
@@ -89,7 +89,7 @@ describe('createProvider', () => {
       id: 'google-vertex-ai',
       workspaceScope: {
         selection: {
-          case: 'workspace',
+          case: WORKSPACE_SCOPE,
           value: DEFAULT_WORKSPACE,
         },
       },
@@ -103,7 +103,7 @@ describe('createProvider', () => {
       },
       workspaceScope: {
         selection: {
-          case: 'workspace',
+          case: WORKSPACE_SCOPE,
           value: DEFAULT_WORKSPACE,
         },
       },
@@ -120,7 +120,7 @@ describe('createProvider', () => {
       secretMaterialKeys: ['client_secret', 'refresh_token'],
       workspaceScope: {
         selection: {
-          case: 'workspace',
+          case: WORKSPACE_SCOPE,
           value: DEFAULT_WORKSPACE,
         },
       },
@@ -130,7 +130,7 @@ describe('createProvider', () => {
       credentialKey: 'GOOGLE_API_KEY',
       workspaceScope: {
         selection: {
-          case: 'workspace',
+          case: WORKSPACE_SCOPE,
           value: DEFAULT_WORKSPACE,
         },
       },
@@ -145,7 +145,7 @@ describe('createProvider', () => {
       name: 'my-gcp',
       workspaceScope: {
         selection: {
-          case: 'workspace',
+          case: WORKSPACE_SCOPE,
           value: DEFAULT_WORKSPACE,
         },
       },
@@ -160,7 +160,7 @@ describe('createProvider', () => {
       name: 'my-gcp',
       workspaceScope: {
         selection: {
-          case: 'workspace',
+          case: WORKSPACE_SCOPE,
           value: DEFAULT_WORKSPACE,
         },
       },

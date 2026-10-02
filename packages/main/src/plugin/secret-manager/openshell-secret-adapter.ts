@@ -24,7 +24,12 @@ import { OpenshellNetworkPolicy } from '/@/plugin/openshell-cli/openshell-networ
 import { OpenshellSdkClientManager } from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
 import { OpenShellRegistry } from '/@/plugin/openshell-registry.js';
 import { DefaultProviderFactory } from '/@/plugin/secret-manager/default-provider-factory.js';
-import { CreateProfileOptions, DEFAULT_WORKSPACE, OpenshellProfile } from '/@api/openshell-gateway-info.js';
+import {
+  CreateProfileOptions,
+  DEFAULT_WORKSPACE,
+  OpenshellProfile,
+  WORKSPACE_SCOPE,
+} from '/@api/openshell-gateway-info.js';
 import type { SecretCliBackend, SecretCreateOptions, SecretInfo, SecretName } from '/@api/secret-info.js';
 
 import type { ProviderFactory, SelectableProviderFactory } from './provider-factory.js';
@@ -61,7 +66,7 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
     const response = await client.raw.listProviders({
       workspaceScope: {
         selection: {
-          case: 'workspace',
+          case: WORKSPACE_SCOPE,
           value: DEFAULT_WORKSPACE,
         },
       },
@@ -78,7 +83,7 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
       name,
       workspaceScope: {
         selection: {
-          case: 'workspace',
+          case: WORKSPACE_SCOPE,
           value: DEFAULT_WORKSPACE,
         },
       },
@@ -91,7 +96,7 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
     const response = await client.raw.listProviderProfiles({
       workspaceScope: {
         selection: {
-          case: 'workspace',
+          case: WORKSPACE_SCOPE,
           value: DEFAULT_WORKSPACE,
         },
       },
@@ -145,7 +150,7 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
       ],
       workspaceScope: {
         selection: {
-          case: 'workspace',
+          case: WORKSPACE_SCOPE,
           value: DEFAULT_WORKSPACE,
         },
       },
@@ -164,7 +169,7 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
       allowMissing: true,
       workspaceScope: {
         selection: {
-          case: 'workspace',
+          case: WORKSPACE_SCOPE,
           value: DEFAULT_WORKSPACE,
         },
       },
