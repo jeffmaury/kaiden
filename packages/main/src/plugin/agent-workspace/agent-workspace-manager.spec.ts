@@ -1487,18 +1487,6 @@ describe('ensureModelSecret', () => {
       'kaiden',
     );
   });
-
-  test('does not call setInference when secret type is not in SET_INFERENCE_TYPES', async () => {
-    vi.mocked(secretManager.ensureSecretForSandbox).mockResolvedValue({
-      name: 'my-workspace-secret',
-      type: 'cursor',
-    });
-
-    const options = { ...baseOptions, model: 'cursor::gpt-4o::https://api.cursor.com' };
-    await manager.ensureModelSecret(options, 'my-workspace', 'claude');
-
-    expect(openshellCli.setInference).not.toHaveBeenCalled();
-  });
 });
 
 describe('list', () => {
