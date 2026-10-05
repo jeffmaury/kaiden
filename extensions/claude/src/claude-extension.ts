@@ -110,7 +110,8 @@ export class ClaudeExtension {
       description: 'Anthropic cloud agent — connect with an API key to access Claude models.',
       icon: providerImages,
       command: 'claude',
-      baseImage: 'ghcr.io/openkaiden/openshell-image-claude:fd194d5bde14bf758c82bb2aace23fea596dfbde',
+      baseImage:
+        'ghcr.io/openkaiden/openshell-image-claude@sha256:38ddd7700da24f8102430613c8b1d0568c875ee0788ceda2ff79c465070774d9',
       acp: { command: 'claude-agent-acp', args: [] },
       tags: ['Cloud'],
       configurationFiles: [

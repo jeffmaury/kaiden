@@ -61,7 +61,8 @@ describe('ClaudeExtension', () => {
         name: 'Claude Code',
         description: expect.any(String),
         icon: expect.objectContaining({ icon: './icon.png' }),
-        baseImage: 'ghcr.io/openkaiden/openshell-image-claude:fd194d5bde14bf758c82bb2aace23fea596dfbde',
+        baseImage:
+          'ghcr.io/openkaiden/openshell-image-claude@sha256:38ddd7700da24f8102430613c8b1d0568c875ee0788ceda2ff79c465070774d9',
         acp: { command: 'claude-agent-acp', args: [] },
         tags: ['Cloud'],
         destinationSkillsFolder: '${HOME}/.claude/skills',
