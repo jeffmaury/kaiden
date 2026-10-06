@@ -284,9 +284,7 @@ export class SecretManager {
     connectionProperties: [string, IConfigurationPropertyRecordedSchema][],
     provider: ProviderImpl,
   ): Promise<SecretValue> {
-    const configKeys = connectionProperties.filter(
-      ([fullKey]) => !fullKey.endsWith('._type') && !fullKey.endsWith('._needsInferenceSetup'),
-    );
+    const configKeys = connectionProperties.filter(([fullKey]) => !fullKey.endsWith('._type'));
 
     const extensionStorage = this.safeStorageRegistry.getExtensionStorage(provider.extensionId);
 
