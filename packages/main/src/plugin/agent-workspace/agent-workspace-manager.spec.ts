@@ -1115,8 +1115,8 @@ describe('create – OpenShell mode', () => {
 
   test('cleans up secret and profile when sandbox readiness fails', async () => {
     vi.mocked(secretManager.ensureSecretForSandbox).mockResolvedValue({
-      name: 'my-sandbox-secret',
-      type: 'my-sandbox-profile',
+      secretName: 'my-sandbox-secret',
+      clonedProfile: 'my-sandbox-profile',
     });
     vi.mocked(sdkSandbox.waitReady).mockRejectedValue(new Error('timed out'));
 
@@ -1129,8 +1129,8 @@ describe('create – OpenShell mode', () => {
 
   test('cleans up secret and profile when upload fails', async () => {
     vi.mocked(secretManager.ensureSecretForSandbox).mockResolvedValue({
-      name: 'my-sandbox-secret',
-      type: 'my-sandbox-profile',
+      secretName: 'my-sandbox-secret',
+      clonedProfile: 'my-sandbox-profile',
     });
     vi.mocked(openshellCli.uploadToSandbox).mockRejectedValue(new Error('upload failed'));
 
@@ -1166,8 +1166,8 @@ describe('create – OpenShell mode', () => {
 
   test('attaches secret to sandbox when ensureSecretForSandbox returns a secret', async () => {
     vi.mocked(secretManager.ensureSecretForSandbox).mockResolvedValue({
-      name: 'my-sandbox-secret',
-      type: 'vertex-ai',
+      secretName: 'my-sandbox-secret',
+      clonedProfile: 'vertex-ai-clone',
     });
 
     const options = { ...defaultOptions, model: 'vertexai::claude-sonnet-4::' };
@@ -1500,8 +1500,8 @@ describe('ensureModelSecret', () => {
 
   test('adds secret name to options.secrets when found', async () => {
     vi.mocked(secretManager.ensureSecretForSandbox).mockResolvedValue({
-      name: 'my-workspace-secret',
-      type: 'cursor',
+      secretName: 'my-workspace-secret',
+      clonedProfile: 'cursor-clone',
     });
 
     const options = { ...baseOptions, model: 'cursor::gpt-4o::https://api.cursor.com' };

@@ -44,6 +44,11 @@ import type {
 
 import { OpenshellSecretAdapter } from './openshell-secret-adapter.js';
 
+export interface SandboxSecretResult {
+  secretName: string;
+  clonedProfile?: string;
+}
+
 /**
  * Manages secrets by delegating to a CLI backend.
  *
@@ -152,7 +157,7 @@ export class SecretManager {
     modelId: string,
     agentCommand: string,
     gateway?: string,
-  ): Promise<SecretInfo | undefined> {
+  ): Promise<SandboxSecretResult | undefined> {
     const info = this.providerRegistry.getInferenceConnection(modelId);
     if (!info) return undefined;
 
@@ -165,7 +170,7 @@ export class SecretManager {
     connection: InferenceProviderConnection,
     agentCommand: string,
     gateway?: string,
-  ): Promise<SecretInfo | undefined> {
+  ): Promise<SandboxSecretResult | undefined> {
     const provider = this.providerRegistry.getProvider(providerId);
     const { config, connectionProperties } = this.getConnectionProperties(connection, provider);
 
@@ -178,7 +183,7 @@ export class SecretManager {
     const uuid = randomUUID();
     const secretName = `${sandboxName}-${uuid}`;
 
-    const resolvedType = await this.resolveProfileForAgent(
+    const clonedProfile = await this.resolveProfileForAgent(
       secretType,
       agentCommand,
       sandboxName,
@@ -187,6 +192,7 @@ export class SecretManager {
       connection.endpoint,
     );
 
+    const resolvedType = clonedProfile ?? secretType;
     const secretValue = await this.buildSecretValue(config, connectionProperties, provider);
 
     await this.create(
@@ -199,16 +205,14 @@ export class SecretManager {
       gateway,
     );
 
-    return { name: secretName, type: resolvedType };
+    return { secretName, clonedProfile };
   }
 
   /**
-   * Check whether the agent command is allowed by the profile's
-   * binaries list. If not, clone the profile with the agent command
-   * added and return the cloned profile's ID.
-   *
-   * A missing `binaries` field is treated as an empty list, meaning
-   * no binary is authorised and the profile must be cloned.
+   * Clone the provider profile for the sandbox, adding the agent binary
+   * if needed. Returns the cloned profile name, or `undefined` when the
+   * profile should be used directly (e.g. google-vertex-ai which manages
+   * credential refresh via the gateway).
    */
   async resolveProfileForAgent(
     profileId: string,
@@ -217,11 +221,16 @@ export class SecretManager {
     uuid: string,
     gateway?: string,
     endpoint?: string,
-  ): Promise<string> {
+  ): Promise<string | undefined> {
     const profiles = this.openshellRegistry.getProfiles();
     const profile = profiles.find(p => p.id === profileId);
     if (!profile) {
       throw new Error(`The required profile ${profileId} does not exist`);
+    }
+
+    if (!this.openshellAdapter.shouldCloneProfile(profileId)) {
+      await this.openshellAdapter.ensureProfileOnGateway(profileId, gateway);
+      return undefined;
     }
 
     const binaries = profile.binaries?.map(b => b.path) ?? [];

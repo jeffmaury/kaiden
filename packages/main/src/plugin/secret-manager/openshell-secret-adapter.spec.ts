@@ -478,3 +478,76 @@ describe('deleteProfile', () => {
     expect(sdkClientManager.getClient).toHaveBeenCalledWith('remote');
   });
 });
+
+describe('shouldCloneProfile', () => {
+  test('returns false for google-vertex-ai', () => {
+    expect(adapter.shouldCloneProfile('google-vertex-ai')).toBe(false);
+  });
+
+  test('returns true for profiles without a selectable factory', () => {
+    expect(adapter.shouldCloneProfile('openai')).toBe(true);
+  });
+});
+
+describe('ensureProfileOnGateway', () => {
+  test('does nothing when profile already exists on gateway', async () => {
+    mockRaw.listProviderProfiles.mockResolvedValue({
+      profiles: [{ id: 'google-vertex-ai', displayName: 'Google Vertex AI', credentials: [] }],
+    });
+
+    await adapter.ensureProfileOnGateway('google-vertex-ai');
+
+    expect(mockRaw.importProviderProfiles).not.toHaveBeenCalled();
+  });
+
+  test('imports profile from registry when not on gateway', async () => {
+    mockRaw.listProviderProfiles.mockResolvedValue({ profiles: [] });
+    const registryProfile = { id: 'google-vertex-ai', displayName: 'Google Vertex AI', credentials: [] };
+    vi.mocked(openshellRegistry.getProfiles).mockReturnValue([registryProfile] as never);
+    mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
+
+    await adapter.ensureProfileOnGateway('google-vertex-ai');
+
+    expect(mockRaw.importProviderProfiles).toHaveBeenCalledWith(
+      expect.objectContaining({
+        profiles: [
+          expect.objectContaining({
+            profile: registryProfile,
+            source: 'imported from registry',
+          }),
+        ],
+      }),
+    );
+  });
+
+  test('throws when profile not found in registry', async () => {
+    mockRaw.listProviderProfiles.mockResolvedValue({ profiles: [] });
+    vi.mocked(openshellRegistry.getProfiles).mockReturnValue([]);
+
+    await expect(adapter.ensureProfileOnGateway('google-vertex-ai')).rejects.toThrow(
+      'Provider profile "google-vertex-ai" not found in registry',
+    );
+  });
+
+  test('throws when import fails', async () => {
+    mockRaw.listProviderProfiles.mockResolvedValue({ profiles: [] });
+    vi.mocked(openshellRegistry.getProfiles).mockReturnValue([
+      { id: 'google-vertex-ai', displayName: 'Google Vertex AI', credentials: [] },
+    ] as never);
+    mockRaw.importProviderProfiles.mockResolvedValue({ imported: false, diagnostics: ['conflict'] });
+
+    await expect(adapter.ensureProfileOnGateway('google-vertex-ai')).rejects.toThrow(
+      `Provider profile google-vertex-ai can't be imported`,
+    );
+  });
+
+  test('uses specified gateway', async () => {
+    mockRaw.listProviderProfiles.mockResolvedValue({
+      profiles: [{ id: 'google-vertex-ai', displayName: 'Google Vertex AI', credentials: [] }],
+    });
+
+    await adapter.ensureProfileOnGateway('google-vertex-ai', 'remote');
+
+    expect(sdkClientManager.getClient).toHaveBeenCalledWith('remote');
+  });
+});

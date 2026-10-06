@@ -352,7 +352,7 @@ export class AgentWorkspaceManager implements Disposable {
 
         const networkPolicy = this.openshellNetworkPolicy.buildPolicyObject(
           workspace.network,
-          secretName !== undefined ? undefined : endpoint,
+          profileName !== undefined ? undefined : endpoint,
         );
         if (networkPolicy) {
           await this.openshellPolicyManager.updatePolicy(sandboxName, networkPolicy, options.gateway);
@@ -558,7 +558,7 @@ export class AgentWorkspaceManager implements Disposable {
     options: AgentWorkspaceCreateOptions,
     sandboxName: string,
     agentCommand: string,
-  ): Promise<{ secretName: string; profileName: string } | undefined> {
+  ): Promise<{ secretName: string; profileName?: string } | undefined> {
     if (options.workspaceConfiguration?.secrets?.length) {
       return undefined;
     }
@@ -570,18 +570,18 @@ export class AgentWorkspaceManager implements Disposable {
     options: AgentWorkspaceCreateOptions,
     sandboxName: string,
     agentCommand: string,
-  ): Promise<{ secretName: string; profileName: string } | undefined> {
-    const secret = await this.secretManager.ensureSecretForSandbox(
+  ): Promise<{ secretName: string; profileName?: string } | undefined> {
+    const result = await this.secretManager.ensureSecretForSandbox(
       sandboxName,
       options.model,
       agentCommand,
       options.gateway,
     );
-    if (!secret) return undefined;
+    if (!result) return undefined;
 
-    options.secrets = [...new Set([...(options.secrets ?? []), secret.name])];
+    options.secrets = [...new Set([...(options.secrets ?? []), result.secretName])];
 
-    return { secretName: secret.name, profileName: secret.type };
+    return { secretName: result.secretName, profileName: result.clonedProfile };
   }
 
   async remove(id: string, gateway: string): Promise<AgentWorkspaceId> {

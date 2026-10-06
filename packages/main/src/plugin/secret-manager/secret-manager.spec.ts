@@ -677,7 +677,7 @@ describe('ensureSecretForSandbox', () => {
 
     const result = await manager.ensureSecretForSandbox('my-sandbox', 'openai::gpt-4::', 'claude', 'kaiden');
 
-    expect(result).toEqual({ name: 'my-sandbox-00-01-02-03-04', type: 'my-sandbox-00-01-02-03-04' });
+    expect(result).toEqual({ secretName: 'my-sandbox-00-01-02-03-04', clonedProfile: 'my-sandbox-00-01-02-03-04' });
     expect(mockRaw.createProvider).toHaveBeenCalledWith(
       expect.objectContaining({
         provider: expect.objectContaining({
@@ -953,6 +953,46 @@ describe('resolveProfileForAgent', () => {
                 }),
               ]),
             }),
+          }),
+        ],
+      }),
+    );
+  });
+
+  test('returns undefined without cloning for google-vertex-ai profile', async () => {
+    vi.mocked(openshellRegistry.getProfiles).mockReturnValue([
+      { id: 'google-vertex-ai', displayName: 'Google Vertex AI', credentials: [], binaries: [{ path: '/**' }] },
+    ] as never);
+    mockRaw.listProviderProfiles.mockResolvedValue({
+      profiles: [{ id: 'google-vertex-ai' }],
+    });
+
+    const result = await manager.resolveProfileForAgent('google-vertex-ai', 'claude', 'test-sandbox', 'test-uuid-1234');
+
+    expect(result).toBeUndefined();
+    expect(mockRaw.importProviderProfiles).not.toHaveBeenCalled();
+  });
+
+  test('imports google-vertex-ai profile to gateway when not present', async () => {
+    const registryProfile = {
+      id: 'google-vertex-ai',
+      displayName: 'Google Vertex AI',
+      credentials: [],
+      binaries: [{ path: '/**' }],
+    };
+    vi.mocked(openshellRegistry.getProfiles).mockReturnValue([registryProfile] as never);
+    mockRaw.listProviderProfiles.mockResolvedValue({ profiles: [] });
+    mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
+
+    const result = await manager.resolveProfileForAgent('google-vertex-ai', 'claude', 'test-sandbox', 'test-uuid-1234');
+
+    expect(result).toBeUndefined();
+    expect(mockRaw.importProviderProfiles).toHaveBeenCalledWith(
+      expect.objectContaining({
+        profiles: [
+          expect.objectContaining({
+            profile: registryProfile,
+            source: 'imported from registry',
           }),
         ],
       }),

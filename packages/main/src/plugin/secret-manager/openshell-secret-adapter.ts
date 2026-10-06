@@ -185,6 +185,49 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
     });
   }
 
+  async ensureProfileOnGateway(profileId: string, gateway?: string): Promise<void> {
+    const client = await this.sdkClientManager.getClient(gateway);
+    const response = await client.raw.listProviderProfiles({
+      workspaceScope: {
+        selection: {
+          case: WORKSPACE_SCOPE,
+          value: DEFAULT_WORKSPACE,
+        },
+      },
+    });
+    if (response.profiles.some(p => p.id === profileId)) {
+      return;
+    }
+    const profile = this.openshellRegistry.getProfiles().find(p => p.id === profileId);
+    if (!profile) {
+      throw new Error(`Provider profile "${profileId}" not found in registry`);
+    }
+    const result = await client.raw.importProviderProfiles({
+      profiles: [
+        {
+          profile: profile,
+          source: `imported from registry`,
+        },
+      ],
+      workspaceScope: {
+        selection: {
+          case: WORKSPACE_SCOPE,
+          value: DEFAULT_WORKSPACE,
+        },
+      },
+    });
+    if (!result.imported) {
+      throw new Error(
+        `Provider profile ${profileId} can't be imported, diagnostics: ${JSON.stringify(result.diagnostics)}`,
+      );
+    }
+  }
+
+  shouldCloneProfile(profileId: string): boolean {
+    const factory = this.providerFactories.find(f => f.supports(profileId));
+    return factory?.requiresClone ?? true;
+  }
+
   #resolveFactory(options: SecretCreateOptions): ProviderFactory {
     return (
       this.providerFactories.find(f => f.supports(options.parentType ?? options.type)) ?? this.defaultProviderFactory

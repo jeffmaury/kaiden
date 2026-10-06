@@ -46,6 +46,8 @@ const adcOptions: SecretCreateOptions = {
   },
 };
 
+const envKeys = ['GOOGLE_API_KEY', 'SECOND_KEY'];
+
 beforeEach(async () => {
   vi.resetAllMocks();
   mockRaw = {
@@ -73,7 +75,7 @@ beforeEach(async () => {
       credentials: [
         {
           name: 'api_key',
-          envVars: ['GOOGLE_API_KEY'],
+          envVars: envKeys,
           refresh: { strategy: 3 },
         },
       ],
@@ -108,33 +110,35 @@ describe('createProvider', () => {
         },
       },
     });
-    expect(mockRaw.configureProviderRefresh).toHaveBeenCalledWith({
-      provider: 'my-gcp',
-      credentialKey: 'GOOGLE_API_KEY',
-      strategy: 3,
-      material: {
-        client_id: 'test-client-id',
-        client_secret: 'test-client-secret',
-        refresh_token: 'test-refresh-token',
-      },
-      secretMaterialKeys: ['client_secret', 'refresh_token'],
-      workspaceScope: {
-        selection: {
-          case: WORKSPACE_SCOPE,
-          value: DEFAULT_WORKSPACE,
+    for (const key of envKeys) {
+      expect(mockRaw.configureProviderRefresh).toHaveBeenCalledWith({
+        provider: 'my-gcp',
+        credentialKey: key,
+        strategy: 3,
+        material: {
+          client_id: 'test-client-id',
+          client_secret: 'test-client-secret',
+          refresh_token: 'test-refresh-token',
         },
-      },
-    });
-    expect(mockRaw.rotateProviderCredential).toHaveBeenCalledWith({
-      provider: 'my-gcp',
-      credentialKey: 'GOOGLE_API_KEY',
-      workspaceScope: {
-        selection: {
-          case: WORKSPACE_SCOPE,
-          value: DEFAULT_WORKSPACE,
+        secretMaterialKeys: ['client_secret', 'refresh_token'],
+        workspaceScope: {
+          selection: {
+            case: WORKSPACE_SCOPE,
+            value: DEFAULT_WORKSPACE,
+          },
         },
-      },
-    });
+      });
+      expect(mockRaw.rotateProviderCredential).toHaveBeenCalledWith({
+        provider: 'my-gcp',
+        credentialKey: key,
+        workspaceScope: {
+          selection: {
+            case: WORKSPACE_SCOPE,
+            value: DEFAULT_WORKSPACE,
+          },
+        },
+      });
+    }
   });
 
   test('rolls back provider on configureProviderRefresh failure', async () => {

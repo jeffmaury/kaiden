@@ -31,6 +31,8 @@ import type { SelectableProviderFactory } from './provider-factory.js';
 
 @injectable()
 export class GcloudAdcProviderFactory implements SelectableProviderFactory {
+  readonly requiresClone = false;
+
   supports(type: string): boolean {
     return type === 'google-vertex-ai';
   }
@@ -75,48 +77,50 @@ export class GcloudAdcProviderFactory implements SelectableProviderFactory {
     });
 
     const { clientId, clientSecret, refreshToken } = await readGcloudAdc(credentials);
-    try {
-      await client.raw.configureProviderRefresh({
-        provider: options.name,
-        credentialKey,
-        strategy: ProviderCredentialRefreshStrategy.OAUTH2_REFRESH_TOKEN,
-        material: {
-          client_id: clientId,
-          client_secret: clientSecret,
-          refresh_token: refreshToken,
-        },
-        secretMaterialKeys: ['client_secret', 'refresh_token'],
-        workspaceScope: {
-          selection: {
-            case: WORKSPACE_SCOPE,
-            value: DEFAULT_WORKSPACE,
+    for (const key of adcCredential.envVars) {
+      try {
+        await client.raw.configureProviderRefresh({
+          provider: options.name,
+          credentialKey: key,
+          strategy: ProviderCredentialRefreshStrategy.OAUTH2_REFRESH_TOKEN,
+          material: {
+            client_id: clientId,
+            client_secret: clientSecret,
+            refresh_token: refreshToken,
           },
-        },
-      });
-
-      await client.raw.rotateProviderCredential({
-        provider: options.name,
-        credentialKey,
-        workspaceScope: {
-          selection: {
-            case: WORKSPACE_SCOPE,
-            value: DEFAULT_WORKSPACE,
-          },
-        },
-      });
-    } catch (error: unknown) {
-      await client.raw
-        .deleteProvider({
-          name: options.name,
+          secretMaterialKeys: ['client_secret', 'refresh_token'],
           workspaceScope: {
             selection: {
               case: WORKSPACE_SCOPE,
               value: DEFAULT_WORKSPACE,
             },
           },
-        })
-        .catch(() => {});
-      throw error;
+        });
+
+        await client.raw.rotateProviderCredential({
+          provider: options.name,
+          credentialKey: key,
+          workspaceScope: {
+            selection: {
+              case: WORKSPACE_SCOPE,
+              value: DEFAULT_WORKSPACE,
+            },
+          },
+        });
+      } catch (error: unknown) {
+        await client.raw
+          .deleteProvider({
+            name: options.name,
+            workspaceScope: {
+              selection: {
+                case: WORKSPACE_SCOPE,
+                value: DEFAULT_WORKSPACE,
+              },
+            },
+          })
+          .catch(() => {});
+        throw error;
+      }
     }
   }
 }

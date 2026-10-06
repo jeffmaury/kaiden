@@ -429,12 +429,11 @@ describe('ClaudeExtension', () => {
 
       await agent.preWorkspaceStart(context);
 
-      expect(workspace.environment).toContainEqual({ name: 'CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS', value: '1' });
-      expect(workspace.environment).not.toEqual(
-        expect.arrayContaining([expect.objectContaining({ name: 'CLAUDE_CODE_SIMPLE' })]),
-      );
-      expect(workspace.environment).toContainEqual({ name: 'ANTHROPIC_BASE_URL', value: 'https://inference.local' });
-      expect(workspace.environment).toContainEqual({ name: 'ANTHROPIC_API_KEY', value: 'unused' });
+      expect(workspace.environment).toContainEqual({
+        name: 'CLAUDE_CODE_USE_VERTEX',
+        value: '1',
+      });
+      expect(workspace.environment).toContainEqual({ name: 'CLAUDE_CODE_SKIP_VERTEX_AUTH', value: '1' });
     });
 
     test('does not add Vertex AI environment variables for non-vertexai models', async () => {
@@ -468,8 +467,8 @@ describe('ClaudeExtension', () => {
         environment: [
           { name: 'CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS', value: '0' },
           { name: 'CLAUDE_CODE_SIMPLE', value: '1' },
-          { name: 'ANTHROPIC_BASE_URL', value: 'https://api.anthropic.com' },
-          { name: 'ANTHROPIC_API_KEY', value: 'mykey' },
+          { name: 'CLAUDE_CODE_USE_VERTEX', value: '0' },
+          { name: 'CLAUDE_CODE_SKIP_VERTEX_AUTH', value: '0' },
         ],
       };
 
@@ -488,19 +487,19 @@ describe('ClaudeExtension', () => {
         e => e.name === 'CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS',
       );
       const claudeCodeUseSimple = workspace.environment.filter(e => e.name === 'CLAUDE_CODE_SIMPLE');
-      const anthropicBaseURL = workspace.environment.filter(e => e.name === 'ANTHROPIC_BASE_URL');
-      const anthropicKey = workspace.environment.filter(e => e.name === 'ANTHROPIC_API_KEY');
+      const claudeCodeUseVertex = workspace.environment.filter(e => e.name === 'CLAUDE_CODE_USE_VERTEX');
+      const claudeCodeSkipVertexAuth = workspace.environment.filter(e => e.name === 'CLAUDE_CODE_SKIP_VERTEX_AUTH');
 
       expect(claudeCodeDisableExperimentalBetas).toHaveLength(1);
       expect(claudeCodeDisableExperimentalBetas[0]).toEqual({
         name: 'CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS',
-        value: '1',
+        value: '0',
       });
       expect(claudeCodeUseSimple).toHaveLength(0);
-      expect(anthropicBaseURL).toHaveLength(1);
-      expect(anthropicBaseURL[0]).toEqual({ name: 'ANTHROPIC_BASE_URL', value: 'https://inference.local' });
-      expect(anthropicKey).toHaveLength(1);
-      expect(anthropicKey[0]).toEqual({ name: 'ANTHROPIC_API_KEY', value: 'unused' });
+      expect(claudeCodeUseVertex).toHaveLength(1);
+      expect(claudeCodeUseVertex[0]).toEqual({ name: 'CLAUDE_CODE_USE_VERTEX', value: '1' });
+      expect(claudeCodeSkipVertexAuth).toHaveLength(1);
+      expect(claudeCodeSkipVertexAuth[0]).toEqual({ name: 'CLAUDE_CODE_SKIP_VERTEX_AUTH', value: '1' });
     });
   });
 });
