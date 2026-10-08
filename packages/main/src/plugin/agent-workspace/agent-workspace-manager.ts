@@ -21,7 +21,7 @@ import { homedir, tmpdir } from 'node:os';
 import { basename, isAbsolute, join, posix, resolve } from 'node:path';
 
 import type { ExecInteractiveSession } from '@nvidia/openshell-sdk';
-import type { Disposable } from '@openkaiden/api';
+import type { Agent, Disposable } from '@openkaiden/api';
 import { SerializeAddon } from '@xterm/addon-serialize';
 import { Terminal as HeadlessTerminal } from '@xterm/headless';
 import type { WebContents } from 'electron';
@@ -217,6 +217,11 @@ export class AgentWorkspaceManager implements Disposable {
       if (!sandboxName) {
         throw new Error('workspace name is required when no project folder is specified');
       }
+      const sandboxNameError = getSandboxNameValidationError(sandboxName);
+      if (sandboxNameError) {
+        throw new Error(sandboxNameError);
+      }
+
       const agent = this.agentRegistry.getAgentRegistration(options.agent);
       if (!agent) {
         throw new Error(`Unable to create workspace: agent ${options.agent} not registered`);
@@ -227,6 +232,8 @@ export class AgentWorkspaceManager implements Disposable {
         const workspaceId = await this.createOpenshell(
           options,
           gateway,
+          sandboxName,
+          agent,
           secretResult?.secretName,
           secretResult?.profileName,
         );
@@ -252,6 +259,8 @@ export class AgentWorkspaceManager implements Disposable {
   private async createOpenshell(
     options: AgentWorkspaceCreateOptions,
     gateway: GatewayInfo,
+    sandboxName: string,
+    agent: Agent,
     secretName?: string,
     profileName?: string,
   ): Promise<AgentWorkspaceId> {
@@ -261,20 +270,7 @@ export class AgentWorkspaceManager implements Disposable {
     const rawEndpoint = connectionInfo?.endpoint ?? options.model.split('::')[2] ?? undefined;
     const endpoint = rawEndpoint ? this.openshellNetworkPolicy.rewriteLocalhostUrl(rawEndpoint) : undefined;
 
-    const sandboxName = options.name ?? (options.sourcePath ? basename(options.sourcePath) : undefined);
-    if (!sandboxName) {
-      throw new Error('workspace name is required when no project folder is specified');
-    }
-    const sandboxNameError = getSandboxNameValidationError(sandboxName);
-    if (sandboxNameError) {
-      throw new Error(sandboxNameError);
-    }
-
     const configDir = options.sourcePath ? undefined : this.getGlobalConfigDir(options.gateway, sandboxName);
-    const agent = this.agentRegistry.getAgentRegistration(options.agent);
-    if (!agent) {
-      throw new Error(`Unable to create workspace: agent ${options.agent} not registered`);
-    }
     const workspace = await writeWorkspaceConfig(options, configDir);
     const effectiveImage = workspace.image ?? agent.baseImage;
     const configurationUploads: OpenshellUpload[] = [];
