@@ -509,6 +509,25 @@ describe('create – OpenShell mode', () => {
     expect(result).toEqual({ id: 'my-project' });
   });
 
+  test('secret and profile are rollbacked if create errors', async () => {
+    const options: AgentWorkspaceCreateOptions = {
+      sourcePath: '/tmp/my-project',
+      agent: 'claude',
+      model: 'ramalama::granite-4::',
+      gateway: 'kaiden',
+    };
+    vi.mocked(sdkSandbox.create).mockRejectedValue(new Error('Gateway error'));
+    vi.mocked(secretManager.ensureSecretForSandbox).mockResolvedValue({
+      secretName: 'secret',
+      clonedProfile: 'profile',
+    });
+    await expect(manager.create(options)).rejects.toThrow(/Gateway error/);
+
+    expect(sdkSandbox.create).toHaveBeenCalledWith(expect.objectContaining({ name: 'my-project' }));
+    expect(secretManager.remove).toHaveBeenCalledWith('secret', 'kaiden');
+    expect(secretManager.removeProfile).toHaveBeenCalledWith('profile', 'kaiden');
+  });
+
   test('rejects workspace names longer than the hostname limit', async () => {
     const options: AgentWorkspaceCreateOptions = {
       ...defaultOptions,
