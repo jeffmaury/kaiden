@@ -95,6 +95,7 @@ const TEST_SDK_REFS: {
 ];
 
 const TEST_GATEWAY: GatewayInfo = { canStop: false, name: 'kaiden', endpoint: 'http://localhost:10080' };
+const ADDITIONAL_GATEWAY: GatewayInfo = { canStop: false, name: 'kaiden-test', endpoint: 'http://localhost:10080' };
 
 function mockSdkListSandboxes(
   refs: {
@@ -104,17 +105,28 @@ function mockSdkListSandboxes(
     labels: Record<string, string>;
     resourceVersion: string;
   }[] = TEST_SDK_REFS,
-  gateways: GatewayInfo[] = [TEST_GATEWAY],
 ): void {
+  const gateways: GatewayInfo[] = [TEST_GATEWAY, ADDITIONAL_GATEWAY];
   vi.mocked(openshellGatewayStateManager.listGateways).mockReturnValue(gateways);
-  vi.mocked(openshellSdkClientManager.getClient).mockResolvedValue({
-    sandbox: {
-      ...sdkSandbox,
-      list: vi.fn().mockReturnValue({
-        all: vi.fn().mockResolvedValue(refs),
-      }),
-    },
-  } as never);
+  vi.mocked(openshellSdkClientManager.getClient).mockImplementation(gatewayName => {
+    return gatewayName === TEST_GATEWAY.name
+      ? ({
+          sandbox: {
+            ...sdkSandbox,
+            list: vi.fn().mockReturnValue({
+              all: vi.fn().mockResolvedValue(refs),
+            }),
+          },
+        } as never)
+      : ({
+          sandbox: {
+            ...sdkSandbox,
+            list: vi.fn().mockReturnValue({
+              all: vi.fn().mockResolvedValue([]),
+            }),
+          },
+        } as never);
+  });
 }
 
 let manager: AgentWorkspaceManager;
@@ -1544,8 +1556,19 @@ describe('list', () => {
 
     expect(openshellGatewayStateManager.listGateways).toHaveBeenCalled();
     expect(openshellSdkClientManager.getClient).toHaveBeenCalledWith('kaiden');
-    expect(result).toHaveLength(1);
+    expect(result).toHaveLength(2);
     expect(result.flatMap(gw => gw.sandboxes).map(s => s.id)).toEqual(['ws-1', 'ws-2']);
+  });
+
+  test('delegates to SDK client and returns items with specific gateway', async () => {
+    mockSdkListSandboxes();
+
+    const result = await manager.listOpenshellSandboxes(ADDITIONAL_GATEWAY.name);
+
+    expect(openshellGatewayStateManager.listGateways).toHaveBeenCalled();
+    expect(openshellSdkClientManager.getClient).toHaveBeenCalledWith(ADDITIONAL_GATEWAY.name);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.sandboxes).toEqual([]);
   });
 
   test('returns empty sandboxes when SDK client fails for a gateway', async () => {

@@ -716,8 +716,10 @@ export class AgentWorkspaceManager implements Disposable {
     await writeFile(instancesPath, JSON.stringify(instances, undefined, 4) + '\n', 'utf-8');
   }
 
-  async listOpenshellSandboxes(): Promise<GatewaySandboxes[]> {
-    const gateways = this.openshellGatewayStateManager.listGateways();
+  async listOpenshellSandboxes(gateway?: string): Promise<GatewaySandboxes[]> {
+    const gateways = this.openshellGatewayStateManager
+      .listGateways()
+      .filter(gw => gateway === undefined || gw.name === gateway);
     if (gateways.length === 0) {
       return [];
     }
@@ -770,7 +772,7 @@ export class AgentWorkspaceManager implements Disposable {
   }
 
   async deleteOpenshellSandbox(name: string, gateway: string): Promise<void> {
-    const workspaces = await this.listOpenshellSandboxes();
+    const workspaces = await this.listOpenshellSandboxes(gateway);
     const workspace = workspaces
       .filter(entry => entry.gateway.name === gateway)
       .flatMap(entry => entry.sandboxes)
