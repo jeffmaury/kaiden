@@ -27,14 +27,17 @@ import type { FilesystemMonitoring } from '/@/plugin/filesystem-monitoring.js';
 import type { OpenshellGateway } from '/@/plugin/openshell-cli/openshell-gateway.js';
 import type { OpenshellGatewayStateManager } from '/@/plugin/openshell-cli/openshell-gateway-state-manager.js';
 import { OpenshellNetworkPolicy } from '/@/plugin/openshell-cli/openshell-network-policy.js';
-import { OpenshellSdkClientManager } from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
+import {
+  DEFAULT_WORKSPACE_SCOPE,
+  OpenshellSdkClientManager,
+} from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
 import type { OpenShellRegistry } from '/@/plugin/openshell-registry.js';
 import type { ProviderImpl } from '/@/plugin/provider-impl.js';
 import type { ProviderRegistry } from '/@/plugin/provider-registry.js';
 import type { SafeStorageRegistry } from '/@/plugin/safe-storage/safe-storage-registry.js';
 import type { ApiSenderType } from '/@api/api-sender/api-sender-type.js';
 import type { IConfigurationRegistry } from '/@api/configuration/models.js';
-import { DEFAULT_WORKSPACE, WORKSPACE_SCOPE } from '/@api/openshell-gateway-info.js';
+import { DEFAULT_WORKSPACE } from '/@api/openshell-gateway-info.js';
 import type { SecretCreateOptions } from '/@api/secret-info.js';
 
 import { DefaultProviderFactory } from './default-provider-factory.js';
@@ -216,12 +219,7 @@ describe('openshellAdapter', () => {
         credentials: { GH_TOKEN: 'ghp_abc123' },
         config: {},
       },
-      workspaceScope: {
-        selection: {
-          case: WORKSPACE_SCOPE,
-          value: DEFAULT_WORKSPACE,
-        },
-      },
+      workspaceScope: DEFAULT_WORKSPACE_SCOPE,
     });
     expect(result).toEqual({ name: 'my-secret' });
   });
@@ -289,12 +287,7 @@ describe('openshellAdapter', () => {
 
     expect(mockRaw.deleteProvider).toHaveBeenCalledWith({
       name: 'my-openai',
-      workspaceScope: {
-        selection: {
-          case: WORKSPACE_SCOPE,
-          value: DEFAULT_WORKSPACE,
-        },
-      },
+      workspaceScope: DEFAULT_WORKSPACE_SCOPE,
     });
     expect(result).toEqual({ name: 'my-openai' });
   });
@@ -574,7 +567,12 @@ describe('resolveProfileForAgent', () => {
     ] as never);
     mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
 
-    const result = await manager.resolveProfileForAgent('openai', 'claude', 'test-sandbox', 'test-uuid-1234');
+    const result = await manager.resolveProfileForAgent({
+      profileId: 'openai',
+      agentCommand: 'claude',
+      sandboxName: 'test-sandbox',
+      uuid: 'test-uuid-1234',
+    });
 
     expect(result).toBe('test-sandbox-test-uuid-1234');
     expect(mockRaw.importProviderProfiles).toHaveBeenCalledWith(
@@ -587,12 +585,7 @@ describe('resolveProfileForAgent', () => {
             }),
           }),
         ],
-        workspaceScope: {
-          selection: {
-            case: WORKSPACE_SCOPE,
-            value: DEFAULT_WORKSPACE,
-          },
-        },
+        workspaceScope: DEFAULT_WORKSPACE_SCOPE,
       }),
     );
   });
@@ -603,7 +596,12 @@ describe('resolveProfileForAgent', () => {
     ] as never);
     mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
 
-    const result = await manager.resolveProfileForAgent('openai', 'claude', 'test-sandbox', 'test-uuid-1234');
+    const result = await manager.resolveProfileForAgent({
+      profileId: 'openai',
+      agentCommand: 'claude',
+      sandboxName: 'test-sandbox',
+      uuid: 'test-uuid-1234',
+    });
 
     expect(result).toBe('test-sandbox-test-uuid-1234');
     expect(mockRaw.importProviderProfiles).toHaveBeenCalledWith(
@@ -616,12 +614,7 @@ describe('resolveProfileForAgent', () => {
             }),
           }),
         ],
-        workspaceScope: {
-          selection: {
-            case: WORKSPACE_SCOPE,
-            value: DEFAULT_WORKSPACE,
-          },
-        },
+        workspaceScope: DEFAULT_WORKSPACE_SCOPE,
       }),
     );
   });
@@ -637,12 +630,12 @@ describe('resolveProfileForAgent', () => {
     ] as never);
     mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
 
-    const result = await manager.resolveProfileForAgent(
-      'openai',
-      '/usr/local/bin/claude',
-      'test-sandbox',
-      'test-uuid-1234',
-    );
+    const result = await manager.resolveProfileForAgent({
+      profileId: 'openai',
+      agentCommand: '/usr/local/bin/claude',
+      sandboxName: 'test-sandbox',
+      uuid: 'test-uuid-1234',
+    });
 
     expect(result).toBe('test-sandbox-test-uuid-1234');
     expect(mockRaw.importProviderProfiles).toHaveBeenCalledWith(
@@ -668,7 +661,12 @@ describe('resolveProfileForAgent', () => {
     ] as never);
     mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
 
-    const result = await manager.resolveProfileForAgent('openai', 'claude', 'test-sandbox', 'test-uuid-1234');
+    const result = await manager.resolveProfileForAgent({
+      profileId: 'openai',
+      agentCommand: 'claude',
+      sandboxName: 'test-sandbox',
+      uuid: 'test-uuid-1234',
+    });
 
     expect(result).toBe('test-sandbox-test-uuid-1234');
     expect(mockRaw.importProviderProfiles).toHaveBeenCalledWith(
@@ -684,12 +682,7 @@ describe('resolveProfileForAgent', () => {
             }),
           }),
         ],
-        workspaceScope: {
-          selection: {
-            case: WORKSPACE_SCOPE,
-            value: DEFAULT_WORKSPACE,
-          },
-        },
+        workspaceScope: DEFAULT_WORKSPACE_SCOPE,
       }),
     );
   });
@@ -700,12 +693,12 @@ describe('resolveProfileForAgent', () => {
     ] as never);
     mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
 
-    const result = await manager.resolveProfileForAgent(
-      'openai',
-      '/usr/local/bin/claude',
-      'test-sandbox',
-      'test-uuid-1234',
-    );
+    const result = await manager.resolveProfileForAgent({
+      profileId: 'openai',
+      agentCommand: '/usr/local/bin/claude',
+      sandboxName: 'test-sandbox',
+      uuid: 'test-uuid-1234',
+    });
 
     expect(result).toBe('test-sandbox-test-uuid-1234');
     expect(mockRaw.importProviderProfiles).toHaveBeenCalledWith(
@@ -721,12 +714,7 @@ describe('resolveProfileForAgent', () => {
             }),
           }),
         ],
-        workspaceScope: {
-          selection: {
-            case: WORKSPACE_SCOPE,
-            value: DEFAULT_WORKSPACE,
-          },
-        },
+        workspaceScope: DEFAULT_WORKSPACE_SCOPE,
       }),
     );
   });
@@ -737,7 +725,13 @@ describe('resolveProfileForAgent', () => {
     ] as never);
     mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
 
-    await manager.resolveProfileForAgent('openai', 'claude', 'test-sandbox', 'test-uuid-1234', 'remote-gw');
+    await manager.resolveProfileForAgent({
+      profileId: 'openai',
+      agentCommand: 'claude',
+      sandboxName: 'test-sandbox',
+      uuid: 'test-uuid-1234',
+      gateway: 'remote-gw',
+    });
 
     expect(mockRaw.importProviderProfiles).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -752,12 +746,7 @@ describe('resolveProfileForAgent', () => {
             }),
           }),
         ],
-        workspaceScope: {
-          selection: {
-            case: WORKSPACE_SCOPE,
-            value: DEFAULT_WORKSPACE,
-          },
-        },
+        workspaceScope: DEFAULT_WORKSPACE_SCOPE,
       }),
     );
   });
@@ -769,14 +758,13 @@ describe('resolveProfileForAgent', () => {
     mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
 
     const endpoint = 'http://localhost:11434/v1';
-    const result = await manager.resolveProfileForAgent(
-      'openai',
-      'claude',
-      'my-sandbox',
-      'test-uuid-1234',
-      undefined,
+    const result = await manager.resolveProfileForAgent({
+      profileId: 'openai',
+      agentCommand: 'claude',
+      sandboxName: 'my-sandbox',
+      uuid: 'test-uuid-1234',
       endpoint,
-    );
+    });
 
     expect(result).toBe('my-sandbox-test-uuid-1234');
     expect(mockRaw.importProviderProfiles).toHaveBeenCalledWith(
@@ -796,7 +784,12 @@ describe('resolveProfileForAgent', () => {
     ] as never);
     mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
 
-    const result = await manager.resolveProfileForAgent('openai', 'claude', 'test-sandbox', 'test-uuid-1234');
+    const result = await manager.resolveProfileForAgent({
+      profileId: 'openai',
+      agentCommand: 'claude',
+      sandboxName: 'test-sandbox',
+      uuid: 'test-uuid-1234',
+    });
 
     expect(result).toBe('test-sandbox-test-uuid-1234');
   });
@@ -808,7 +801,13 @@ describe('resolveProfileForAgent', () => {
     mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
 
     const endpoint = 'http://localhost:11434/v1';
-    await manager.resolveProfileForAgent('openai', 'claude', 'test-sandbox', 'test-uuid-1234', undefined, endpoint);
+    await manager.resolveProfileForAgent({
+      profileId: 'openai',
+      agentCommand: 'claude',
+      sandboxName: 'test-sandbox',
+      uuid: 'test-uuid-1234',
+      endpoint,
+    });
 
     expect(mockRaw.importProviderProfiles).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -836,7 +835,12 @@ describe('resolveProfileForAgent', () => {
       profiles: [{ id: 'google-vertex-ai' }],
     });
 
-    const result = await manager.resolveProfileForAgent('google-vertex-ai', 'claude', 'test-sandbox', 'test-uuid-1234');
+    const result = await manager.resolveProfileForAgent({
+      profileId: 'google-vertex-ai',
+      agentCommand: 'claude',
+      sandboxName: 'test-sandbox',
+      uuid: 'test-uuid-1234',
+    });
 
     expect(result).toBeUndefined();
     expect(mockRaw.importProviderProfiles).not.toHaveBeenCalled();
@@ -853,7 +857,12 @@ describe('resolveProfileForAgent', () => {
     mockRaw.listProviderProfiles.mockResolvedValue({ profiles: [] });
     mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
 
-    const result = await manager.resolveProfileForAgent('google-vertex-ai', 'claude', 'test-sandbox', 'test-uuid-1234');
+    const result = await manager.resolveProfileForAgent({
+      profileId: 'google-vertex-ai',
+      agentCommand: 'claude',
+      sandboxName: 'test-sandbox',
+      uuid: 'test-uuid-1234',
+    });
 
     expect(result).toBeUndefined();
     expect(mockRaw.importProviderProfiles).toHaveBeenCalledWith(

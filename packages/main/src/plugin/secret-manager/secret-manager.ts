@@ -173,14 +173,14 @@ export class SecretManager {
     const uuid = randomUUID();
     const secretName = `${sandboxName}-${uuid}`;
 
-    const clonedProfile = await this.resolveProfileForAgent(
-      secretType,
+    const clonedProfile = await this.resolveProfileForAgent({
+      profileId: secretType,
       agentCommand,
       sandboxName,
       uuid,
       gateway,
-      connection.endpoint,
-    );
+      endpoint: connection.endpoint,
+    });
 
     try {
       const resolvedType = clonedProfile ?? secretType;
@@ -211,14 +211,21 @@ export class SecretManager {
    * profile should be used directly (e.g. google-vertex-ai which manages
    * credential refresh via the gateway).
    */
-  async resolveProfileForAgent(
-    profileId: string,
-    agentCommand: string,
-    sandboxName: string,
-    uuid: string,
-    gateway?: string,
-    endpoint?: string,
-  ): Promise<string | undefined> {
+  async resolveProfileForAgent({
+    profileId,
+    agentCommand,
+    sandboxName,
+    uuid,
+    gateway,
+    endpoint,
+  }: {
+    profileId: string;
+    agentCommand: string;
+    sandboxName: string;
+    uuid: string;
+    gateway?: string;
+    endpoint?: string;
+  }): Promise<string | undefined> {
     const profiles = this.openshellRegistry.getProfiles();
     const profile = profiles.find(p => p.id === profileId);
     if (!profile) {

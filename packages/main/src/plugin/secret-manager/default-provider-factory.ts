@@ -19,8 +19,9 @@
 import type { OpenShellClient } from '@nvidia/openshell-sdk';
 import { injectable } from 'inversify';
 
+import { DEFAULT_WORKSPACE_SCOPE } from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
 import { ProviderFactory } from '/@/plugin/secret-manager/provider-factory.js';
-import { DEFAULT_WORKSPACE, WORKSPACE_SCOPE } from '/@api/openshell-gateway-info.js';
+import { DEFAULT_WORKSPACE } from '/@api/openshell-gateway-info.js';
 import type { SecretCreateOptions } from '/@api/secret-info.js';
 
 @injectable()
@@ -41,12 +42,7 @@ export class DefaultProviderFactory implements ProviderFactory {
         config: value.config ?? {},
         profileWorkspace: DEFAULT_WORKSPACE,
       },
-      workspaceScope: {
-        selection: {
-          case: WORKSPACE_SCOPE,
-          value: DEFAULT_WORKSPACE,
-        },
-      },
+      workspaceScope: DEFAULT_WORKSPACE_SCOPE,
     });
   }
 }

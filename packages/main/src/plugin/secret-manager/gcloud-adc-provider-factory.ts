@@ -24,7 +24,8 @@ import type { OpenShellClient } from '@nvidia/openshell-sdk';
 import { ProviderCredentialRefreshStrategy } from '@nvidia/openshell-sdk/raw';
 import { injectable } from 'inversify';
 
-import { DEFAULT_WORKSPACE, WORKSPACE_SCOPE } from '/@api/openshell-gateway-info.js';
+import { DEFAULT_WORKSPACE_SCOPE } from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
+import { DEFAULT_WORKSPACE } from '/@api/openshell-gateway-info.js';
 import type { SecretCreateOptions } from '/@api/secret-info.js';
 
 import type { SelectableProviderFactory } from './provider-factory.js';
@@ -42,12 +43,7 @@ export class GcloudAdcProviderFactory implements SelectableProviderFactory {
 
     const profileResponse = await client.raw.getProviderProfile({
       id: options.type,
-      workspaceScope: {
-        selection: {
-          case: WORKSPACE_SCOPE,
-          value: DEFAULT_WORKSPACE,
-        },
-      },
+      workspaceScope: DEFAULT_WORKSPACE_SCOPE,
     });
     const adcCredential = profileResponse.profile?.credentials.find(
       c => c.refresh?.strategy === ProviderCredentialRefreshStrategy.OAUTH2_REFRESH_TOKEN,
@@ -68,12 +64,7 @@ export class GcloudAdcProviderFactory implements SelectableProviderFactory {
         type: options.type,
         config: typeof value !== 'string' ? (value.config ?? {}) : {},
       },
-      workspaceScope: {
-        selection: {
-          case: WORKSPACE_SCOPE,
-          value: DEFAULT_WORKSPACE,
-        },
-      },
+      workspaceScope: DEFAULT_WORKSPACE_SCOPE,
     });
 
     const { clientId, clientSecret, refreshToken } = await readGcloudAdc(credentials);
@@ -89,36 +80,21 @@ export class GcloudAdcProviderFactory implements SelectableProviderFactory {
             refresh_token: refreshToken,
           },
           secretMaterialKeys: ['client_secret', 'refresh_token'],
-          workspaceScope: {
-            selection: {
-              case: WORKSPACE_SCOPE,
-              value: DEFAULT_WORKSPACE,
-            },
-          },
+          workspaceScope: DEFAULT_WORKSPACE_SCOPE,
         });
 
         await client.raw.rotateProviderCredential({
           provider: options.name,
           credentialKey: key,
-          workspaceScope: {
-            selection: {
-              case: WORKSPACE_SCOPE,
-              value: DEFAULT_WORKSPACE,
-            },
-          },
+          workspaceScope: DEFAULT_WORKSPACE_SCOPE,
         });
       } catch (error: unknown) {
         await client.raw
           .deleteProvider({
             name: options.name,
-            workspaceScope: {
-              selection: {
-                case: WORKSPACE_SCOPE,
-                value: DEFAULT_WORKSPACE,
-              },
-            },
+            workspaceScope: DEFAULT_WORKSPACE_SCOPE,
           })
-          .catch(() => {});
+          .catch(console.error);
         throw error;
       }
     }

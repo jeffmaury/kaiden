@@ -16,6 +16,14 @@
  * SPDX-License-Identifier: Apache-2.0
  ***********************************************************************/
 
+import assert from 'node:assert';
+
+import {
+  NetworkAccessPreset,
+  NetworkEnforcementMode,
+  ProviderCredentialRefreshStrategy,
+  ProviderProfileCategory,
+} from '@nvidia/openshell-sdk/raw';
 import type { OpenShellCLI, OpenShellGateway, ProviderConnectionStatus, ProviderProfile } from '@openkaiden/api';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
@@ -327,6 +335,52 @@ describe('OpenShellRegistry', () => {
       expect(profiles[0]!.credentials[0]!.name).toBe('api_key');
       expect(profiles[0]!.credentials[0]!.required).toBe(true);
       expect(profiles[0]!.credentials[0]!.envVars).toEqual(['OPENAI_API_KEY']);
+    });
+
+    test('parses category, credential strategy, enforcement, and access fields', () => {
+      const yaml = [
+        'id: provider-with-enums',
+        'display_name: Provider with enums',
+        'category: inference',
+        'credentials:',
+        '  - refresh:',
+        '      strategy: oauth2_refresh_token',
+        'endpoints:',
+        '  - enforcement: audit',
+        '    access: read-write',
+      ].join('\n');
+
+      registry.registerProfile(yaml);
+
+      const profile = registry.getProfiles()[0];
+      assert(profile);
+      expect(profile.category).toBe(ProviderProfileCategory.INFERENCE);
+      expect(profile.credentials[0]?.refresh?.strategy).toBe(ProviderCredentialRefreshStrategy.OAUTH2_REFRESH_TOKEN);
+      expect(profile.endpoints[0]?.enforcement).toBe(NetworkEnforcementMode.AUDIT);
+      expect(profile.endpoints[0]?.access).toBe(NetworkAccessPreset.READ_WRITE);
+    });
+
+    test('uses the unspecified enum value for unknown field names', () => {
+      const yaml = [
+        'id: provider-with-unknown-enums',
+        'display_name: Provider with unknown enums',
+        'category: unknown',
+        'credentials:',
+        '  - refresh:',
+        '      strategy: unknown',
+        'endpoints:',
+        '  - enforcement: unknown',
+        '    access: unknown',
+      ].join('\n');
+
+      registry.registerProfile(yaml);
+
+      const profile = registry.getProfiles()[0];
+      assert(profile);
+      expect(profile.category).toBe(ProviderProfileCategory.UNSPECIFIED);
+      expect(profile.credentials[0]?.refresh?.strategy).toBe(ProviderCredentialRefreshStrategy.UNSPECIFIED);
+      expect(profile.endpoints[0]?.enforcement).toBe(NetworkEnforcementMode.UNSPECIFIED);
+      expect(profile.endpoints[0]?.access).toBe(NetworkAccessPreset.UNSPECIFIED);
     });
 
     test('throws when YAML is missing required id field', () => {

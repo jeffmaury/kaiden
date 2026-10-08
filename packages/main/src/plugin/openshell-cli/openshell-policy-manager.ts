@@ -19,10 +19,8 @@
 import { PolicyStatus } from '@nvidia/openshell-sdk/raw';
 import { inject, injectable } from 'inversify';
 
-import { DEFAULT_WORKSPACE, WORKSPACE_SCOPE } from '/@api/openshell-gateway-info.js';
-
 import type { OpenshellPolicy } from './openshell-network-policy.js';
-import { OpenshellSdkClientManager } from './openshell-sdk-client-manager.js';
+import { DEFAULT_WORKSPACE_SCOPE, OpenshellSdkClientManager } from './openshell-sdk-client-manager.js';
 
 @injectable()
 export class OpenshellPolicyManager {
@@ -57,12 +55,7 @@ export class OpenshellPolicyManager {
         {
           sandbox: sandboxName,
           version: result.version,
-          workspaceScope: {
-            selection: {
-              case: WORKSPACE_SCOPE,
-              value: DEFAULT_WORKSPACE,
-            },
-          },
+          workspaceScope: DEFAULT_WORKSPACE_SCOPE,
         },
         { timeoutMs: Math.max(1, deadline - Date.now()) },
       );

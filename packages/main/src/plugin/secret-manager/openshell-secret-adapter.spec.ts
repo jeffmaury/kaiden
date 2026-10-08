@@ -22,9 +22,11 @@ import { NetworkEndpointSchema } from '@nvidia/openshell-sdk/raw';
 import { beforeEach, describe, expect, type Mock, test, vi } from 'vitest';
 
 import { OpenshellNetworkPolicy } from '/@/plugin/openshell-cli/openshell-network-policy.js';
-import { OpenshellSdkClientManager } from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
+import {
+  DEFAULT_WORKSPACE_SCOPE,
+  OpenshellSdkClientManager,
+} from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
 import type { OpenShellRegistry } from '/@/plugin/openshell-registry.js';
-import { DEFAULT_WORKSPACE, WORKSPACE_SCOPE } from '/@api/openshell-gateway-info.js';
 import type { SecretCreateOptions } from '/@api/secret-info.js';
 
 import { DefaultProviderFactory } from './default-provider-factory.js';
@@ -143,12 +145,7 @@ describe('listSecrets', () => {
     const result = await adapter.listSecrets();
 
     expect(mockRaw.listProviders).toHaveBeenCalledWith({
-      workspaceScope: {
-        selection: {
-          case: WORKSPACE_SCOPE,
-          value: DEFAULT_WORKSPACE,
-        },
-      },
+      workspaceScope: DEFAULT_WORKSPACE_SCOPE,
     });
     expect(result).toEqual([
       { name: 'my-openai', type: 'openai' },
@@ -187,12 +184,7 @@ describe('removeSecret', () => {
 
     expect(mockRaw.deleteProvider).toHaveBeenCalledWith({
       name: 'my-openai',
-      workspaceScope: {
-        selection: {
-          case: WORKSPACE_SCOPE,
-          value: DEFAULT_WORKSPACE,
-        },
-      },
+      workspaceScope: DEFAULT_WORKSPACE_SCOPE,
     });
     expect(result).toEqual({ name: 'my-openai' });
   });
@@ -234,12 +226,7 @@ describe('listServices', () => {
     const result = await adapter.listServices();
 
     expect(mockRaw.listProviderProfiles).toHaveBeenCalledWith({
-      workspaceScope: {
-        selection: {
-          case: WORKSPACE_SCOPE,
-          value: DEFAULT_WORKSPACE,
-        },
-      },
+      workspaceScope: DEFAULT_WORKSPACE_SCOPE,
     });
     expect(result).toEqual([
       {
@@ -461,12 +448,7 @@ describe('deleteProfile', () => {
     expect(mockRaw.deleteProviderProfile).toHaveBeenCalledWith({
       id: 'my-sandbox-uuid',
       allowMissing: true,
-      workspaceScope: {
-        selection: {
-          case: WORKSPACE_SCOPE,
-          value: DEFAULT_WORKSPACE,
-        },
-      },
+      workspaceScope: DEFAULT_WORKSPACE_SCOPE,
     });
   });
 

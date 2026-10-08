@@ -26,15 +26,13 @@ import {
 import { inject, injectable, multiInject } from 'inversify';
 
 import { OpenshellNetworkPolicy } from '/@/plugin/openshell-cli/openshell-network-policy.js';
-import { OpenshellSdkClientManager } from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
+import {
+  DEFAULT_WORKSPACE_SCOPE,
+  OpenshellSdkClientManager,
+} from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
 import { OpenShellRegistry } from '/@/plugin/openshell-registry.js';
 import { DefaultProviderFactory } from '/@/plugin/secret-manager/default-provider-factory.js';
-import {
-  type CreateProfileOptions,
-  DEFAULT_WORKSPACE,
-  type OpenshellProfile,
-  WORKSPACE_SCOPE,
-} from '/@api/openshell-gateway-info.js';
+import { type CreateProfileOptions, type OpenshellProfile } from '/@api/openshell-gateway-info.js';
 import type { SecretCliBackend, SecretCreateOptions, SecretInfo, SecretName } from '/@api/secret-info.js';
 
 import type { ProviderFactory, SelectableProviderFactory } from './provider-factory.js';
@@ -69,12 +67,7 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
   async listSecrets(gateway?: string): Promise<SecretInfo[]> {
     const client = await this.sdkClientManager.getClient(gateway);
     const response = await client.raw.listProviders({
-      workspaceScope: {
-        selection: {
-          case: WORKSPACE_SCOPE,
-          value: DEFAULT_WORKSPACE,
-        },
-      },
+      workspaceScope: DEFAULT_WORKSPACE_SCOPE,
     });
     return response.providers.map(p => ({
       name: p.metadata?.name ?? '',
@@ -86,12 +79,7 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
     const client = await this.sdkClientManager.getClient(gateway);
     await client.raw.deleteProvider({
       name,
-      workspaceScope: {
-        selection: {
-          case: WORKSPACE_SCOPE,
-          value: DEFAULT_WORKSPACE,
-        },
-      },
+      workspaceScope: DEFAULT_WORKSPACE_SCOPE,
     });
     return { name };
   }
@@ -99,12 +87,7 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
   async listServices(gateway?: string): Promise<OpenshellProfile[]> {
     const client = await this.sdkClientManager.getClient(gateway);
     const response = await client.raw.listProviderProfiles({
-      workspaceScope: {
-        selection: {
-          case: WORKSPACE_SCOPE,
-          value: DEFAULT_WORKSPACE,
-        },
-      },
+      workspaceScope: DEFAULT_WORKSPACE_SCOPE,
     });
     return response.profiles.map(p => ({
       id: p.id,
@@ -153,16 +136,11 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
     const result = await client.raw.importProviderProfiles({
       profiles: [
         {
-          profile: cloned as typeof baseProfile,
+          profile: cloned,
           source: `cloned from ${options.from}`,
         },
       ],
-      workspaceScope: {
-        selection: {
-          case: WORKSPACE_SCOPE,
-          value: DEFAULT_WORKSPACE,
-        },
-      },
+      workspaceScope: DEFAULT_WORKSPACE_SCOPE,
     });
     if (!result.imported) {
       throw new Error(
@@ -176,24 +154,14 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
     await client.raw.deleteProviderProfile({
       id: profileId,
       allowMissing: true,
-      workspaceScope: {
-        selection: {
-          case: WORKSPACE_SCOPE,
-          value: DEFAULT_WORKSPACE,
-        },
-      },
+      workspaceScope: DEFAULT_WORKSPACE_SCOPE,
     });
   }
 
   async ensureProfileOnGateway(profileId: string, gateway?: string): Promise<void> {
     const client = await this.sdkClientManager.getClient(gateway);
     const response = await client.raw.listProviderProfiles({
-      workspaceScope: {
-        selection: {
-          case: WORKSPACE_SCOPE,
-          value: DEFAULT_WORKSPACE,
-        },
-      },
+      workspaceScope: DEFAULT_WORKSPACE_SCOPE,
     });
     if (response.profiles.some(p => p.id === profileId)) {
       return;
@@ -206,15 +174,10 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
       profiles: [
         {
           profile: profile,
-          source: `imported from registry`,
+          source: 'imported from registry',
         },
       ],
-      workspaceScope: {
-        selection: {
-          case: WORKSPACE_SCOPE,
-          value: DEFAULT_WORKSPACE,
-        },
-      },
+      workspaceScope: DEFAULT_WORKSPACE_SCOPE,
     });
     if (!result.imported) {
       throw new Error(

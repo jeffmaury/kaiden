@@ -56,7 +56,7 @@ export interface NetworkDestination {
 @injectable()
 export class OpenshellNetworkPolicy {
   extractBinaryFromCommand(command: string): string {
-    return command.trim().split(/\s+/)[0] as string;
+    return command.trim().split(/\s+/)[0] ?? '';
   }
 
   endpointMatchesHost(existingHost: string, targetHost: string): boolean {

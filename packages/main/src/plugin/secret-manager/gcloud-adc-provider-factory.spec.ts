@@ -19,7 +19,8 @@
 import type { OpenShellClient } from '@nvidia/openshell-sdk';
 import { beforeEach, describe, expect, type Mock, test, vi } from 'vitest';
 
-import { DEFAULT_WORKSPACE, WORKSPACE_SCOPE } from '/@api/openshell-gateway-info.js';
+import { DEFAULT_WORKSPACE_SCOPE } from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
+import { DEFAULT_WORKSPACE } from '/@api/openshell-gateway-info.js';
 import type { SecretCreateOptions } from '/@api/secret-info.js';
 
 import { GcloudAdcProviderFactory, readGcloudAdc } from './gcloud-adc-provider-factory.js';
@@ -89,12 +90,7 @@ describe('createProvider', () => {
 
     expect(mockRaw.getProviderProfile).toHaveBeenCalledWith({
       id: 'google-vertex-ai',
-      workspaceScope: {
-        selection: {
-          case: WORKSPACE_SCOPE,
-          value: DEFAULT_WORKSPACE,
-        },
-      },
+      workspaceScope: DEFAULT_WORKSPACE_SCOPE,
     });
     expect(mockRaw.createProvider).toHaveBeenCalledWith({
       provider: {
@@ -103,12 +99,7 @@ describe('createProvider', () => {
         config: {},
         profileWorkspace: DEFAULT_WORKSPACE,
       },
-      workspaceScope: {
-        selection: {
-          case: WORKSPACE_SCOPE,
-          value: DEFAULT_WORKSPACE,
-        },
-      },
+      workspaceScope: DEFAULT_WORKSPACE_SCOPE,
     });
     for (const key of envKeys) {
       expect(mockRaw.configureProviderRefresh).toHaveBeenCalledWith({
@@ -121,22 +112,12 @@ describe('createProvider', () => {
           refresh_token: 'test-refresh-token',
         },
         secretMaterialKeys: ['client_secret', 'refresh_token'],
-        workspaceScope: {
-          selection: {
-            case: WORKSPACE_SCOPE,
-            value: DEFAULT_WORKSPACE,
-          },
-        },
+        workspaceScope: DEFAULT_WORKSPACE_SCOPE,
       });
       expect(mockRaw.rotateProviderCredential).toHaveBeenCalledWith({
         provider: 'my-gcp',
         credentialKey: key,
-        workspaceScope: {
-          selection: {
-            case: WORKSPACE_SCOPE,
-            value: DEFAULT_WORKSPACE,
-          },
-        },
+        workspaceScope: DEFAULT_WORKSPACE_SCOPE,
       });
     }
   });
@@ -147,12 +128,7 @@ describe('createProvider', () => {
     await expect(factory.createProvider(client, adcOptions)).rejects.toThrow('configure failed');
     expect(mockRaw.deleteProvider).toHaveBeenCalledWith({
       name: 'my-gcp',
-      workspaceScope: {
-        selection: {
-          case: WORKSPACE_SCOPE,
-          value: DEFAULT_WORKSPACE,
-        },
-      },
+      workspaceScope: DEFAULT_WORKSPACE_SCOPE,
     });
   });
 
@@ -162,12 +138,7 @@ describe('createProvider', () => {
     await expect(factory.createProvider(client, adcOptions)).rejects.toThrow('rotate failed');
     expect(mockRaw.deleteProvider).toHaveBeenCalledWith({
       name: 'my-gcp',
-      workspaceScope: {
-        selection: {
-          case: WORKSPACE_SCOPE,
-          value: DEFAULT_WORKSPACE,
-        },
-      },
+      workspaceScope: DEFAULT_WORKSPACE_SCOPE,
     });
   });
 
