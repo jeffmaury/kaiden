@@ -192,20 +192,27 @@ export class SecretManager {
       connection.endpoint,
     );
 
-    const resolvedType = clonedProfile ?? secretType;
-    const secretValue = await this.buildSecretValue(config, connectionProperties, provider);
+    try {
+      const resolvedType = clonedProfile ?? secretType;
+      const secretValue = await this.buildSecretValue(config, connectionProperties, provider);
 
-    await this.create(
-      {
-        name: secretName,
-        type: resolvedType,
-        parentType: secretType,
-        value: secretValue,
-      },
-      gateway,
-    );
+      await this.create(
+        {
+          name: secretName,
+          type: resolvedType,
+          parentType: secretType,
+          value: secretValue,
+        },
+        gateway,
+      );
 
-    return { secretName, clonedProfile };
+      return { secretName, clonedProfile };
+    } catch (err: unknown) {
+      if (clonedProfile) {
+        this.removeProfile(clonedProfile, gateway).catch(console.error);
+      }
+      throw err;
+    }
   }
 
   /**

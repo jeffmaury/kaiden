@@ -688,6 +688,62 @@ describe('ensureSecretForSandbox', () => {
     );
   });
 
+  test('profile rollbacked if create secret fails', async () => {
+    mockRaw.listProviders.mockResolvedValue({ providers: [] });
+    vi.mocked(providerRegistry.getInferenceConnection).mockReturnValue({
+      connection: mockConnection,
+      providerId: 'kaiden.openai',
+    });
+    vi.mocked(providerRegistry.getProvider).mockReturnValue({
+      extensionId: 'kaiden.openai',
+    } as unknown as ProviderImpl);
+    vi.mocked(openshellRegistry.getProfiles).mockReturnValue([
+      { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [] },
+    ] as never);
+    mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
+
+    const properties = {
+      'openai.connection._type': {
+        scope: 'InferenceProviderConnection',
+        extension: { id: 'kaiden.openai' },
+      },
+      'openai.connection.token': {
+        scope: 'InferenceProviderConnection',
+        extension: { id: 'kaiden.openai' },
+        format: 'password',
+      },
+    } as Record<string, Record<string, unknown>>;
+    vi.mocked(configurationRegistry.getConfigurationProperties).mockReturnValue(
+      properties as unknown as ReturnType<typeof configurationRegistry.getConfigurationProperties>,
+    );
+    vi.mocked(configurationRegistry.getConfiguration).mockReturnValue({
+      get: vi.fn((key: string) => {
+        if (key === 'openai.connection._type') return 'openai';
+        if (key === 'openai.connection.token') return 'openai:conn-sandbox:token';
+        return undefined;
+      }),
+      has: vi.fn(),
+      update: vi.fn(),
+    } as unknown as ReturnType<typeof configurationRegistry.getConfiguration>);
+    vi.mocked(extensionStorageMock.get).mockResolvedValue('actual-api-key');
+    mockRaw.createProvider.mockRejectedValue(new Error(`Can't create provider`));
+
+    const spy = vi.spyOn(manager, 'removeProfile');
+    await expect(manager.ensureSecretForSandbox('my-sandbox', 'openai::gpt-4::', 'claude', 'kaiden')).rejects.toThrow(
+      /Can't create provider/,
+    );
+
+    expect(mockRaw.createProvider).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: expect.objectContaining({
+          metadata: { name: 'my-sandbox-00-01-02-03-04' },
+          type: 'my-sandbox-00-01-02-03-04',
+        }),
+      }),
+    );
+    expect(spy).toHaveBeenCalledWith('my-sandbox-00-01-02-03-04', 'kaiden');
+  });
+
   test('returns undefined when no inference connection exists', async () => {
     mockRaw.listProviders.mockResolvedValue({ providers: [] });
     vi.mocked(providerRegistry.getInferenceConnection).mockReturnValue(undefined);
