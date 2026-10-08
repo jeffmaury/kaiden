@@ -134,16 +134,6 @@ export class SecretManager {
     return secret;
   }
 
-  async ensureSecretForModel(modelId: string, gateway?: string): Promise<SecretInfo | undefined> {
-    const existing = await this.getSecretForModel(modelId, gateway);
-    if (existing) return existing;
-
-    const info = this.providerRegistry.getInferenceConnection(modelId);
-    if (!info) return undefined;
-
-    return this.createSecretForConnection(info.providerId, info.connection, gateway);
-  }
-
   /**
    * Ensure a secret exists for a sandbox. The secret is named
    * `$sandboxName-$uuid` and is linked to the sandbox rather than
@@ -254,36 +244,6 @@ export class SecretManager {
     );
 
     return clonedProfileName;
-  }
-
-  async createSecretForConnection(
-    providerId: string,
-    connection: InferenceProviderConnection,
-    gateway?: string,
-  ): Promise<SecretInfo | undefined> {
-    const provider = this.providerRegistry.getProvider(providerId);
-    const { config, connectionProperties } = this.getConnectionProperties(connection, provider);
-
-    const typeEntry = connectionProperties.find(([fullKey]) => fullKey.endsWith('_type'));
-    if (!typeEntry) return undefined;
-
-    const secretType = config.get<string>(typeEntry[0]);
-    if (!secretType) return undefined;
-
-    const value = await this.buildSecretValue(config, connectionProperties, provider);
-
-    const secretName = `${providerId}-${connection.id}`;
-
-    await this.create(
-      {
-        name: secretName,
-        type: secretType,
-        value: value,
-      },
-      gateway,
-    );
-
-    return { name: secretName, type: secretType };
   }
 
   private async buildSecretValue(
