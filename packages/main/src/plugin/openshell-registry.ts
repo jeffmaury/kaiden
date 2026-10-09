@@ -62,11 +62,20 @@ const accesses = new Map<string, number>(
 );
 
 const EndpointsProviderSchema = z.looseObject({
-  enforcement: z.string().transform(str => enforcements.get(str.toLowerCase()) ?? 0),
-  access: z.string().transform(str => accesses.get(str.toLowerCase()) ?? 0),
+  enforcement: z
+    .string()
+    .transform(str => enforcements.get(str.toLowerCase()) ?? 0)
+    .default(0),
+  access: z
+    .string()
+    .transform(str => accesses.get(str.toLowerCase()) ?? 0)
+    .default(0),
 });
 const CredentialsRefreshProviderSchema = z.looseObject({
-  strategy: z.string().transform(str => strategies.get(str.toLowerCase()) ?? 0),
+  strategy: z
+    .string()
+    .transform(str => strategies.get(str.toLowerCase()) ?? 0)
+    .default(0),
 });
 const CredentialsProviderSchema = z.looseObject({
   refresh: CredentialsRefreshProviderSchema.optional(),
