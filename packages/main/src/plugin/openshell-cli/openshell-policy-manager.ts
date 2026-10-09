@@ -19,8 +19,10 @@
 import { PolicyStatus } from '@nvidia/openshell-sdk/raw';
 import { inject, injectable } from 'inversify';
 
+import { DEFAULT_WORKSPACE_SCOPE } from '/@/plugin/openshell-cli/openshell-utils.js';
+
 import type { OpenshellPolicy } from './openshell-network-policy.js';
-import { DEFAULT_WORKSPACE_SCOPE, OpenshellSdkClientManager } from './openshell-sdk-client-manager.js';
+import { OpenshellSdkClientManager } from './openshell-sdk-client-manager.js';
 
 @injectable()
 export class OpenshellPolicyManager {

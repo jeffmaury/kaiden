@@ -24,8 +24,7 @@ import type { OpenShellClient } from '@nvidia/openshell-sdk';
 import { ProviderCredentialRefreshStrategy } from '@nvidia/openshell-sdk/raw';
 import { injectable } from 'inversify';
 
-import { DEFAULT_WORKSPACE_SCOPE } from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
-import { DEFAULT_WORKSPACE } from '/@api/openshell-gateway-info.js';
+import { DEFAULT_WORKSPACE, DEFAULT_WORKSPACE_SCOPE } from '/@/plugin/openshell-cli/openshell-utils.js';
 import type { SecretCreateOptions } from '/@api/secret-info.js';
 
 import type { SelectableProviderFactory } from './provider-factory.js';
@@ -89,12 +88,14 @@ export class GcloudAdcProviderFactory implements SelectableProviderFactory {
           workspaceScope: DEFAULT_WORKSPACE_SCOPE,
         });
       } catch (error: unknown) {
-        await client.raw
-          .deleteProvider({
+        try {
+          await client.raw.deleteProvider({
             name: options.name,
             workspaceScope: DEFAULT_WORKSPACE_SCOPE,
-          })
-          .catch(console.error);
+          });
+        } catch (error: unknown) {
+          console.error(`Error while deleting provider ${options.name}`);
+        }
         throw error;
       }
     }

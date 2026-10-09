@@ -32,6 +32,7 @@ import { Directories } from '/@/plugin/directories.js';
 import { OpenshellCli } from '/@/plugin/openshell-cli/openshell-cli.js';
 import { OpenshellSdkClientManager } from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
 import { mapSdkSandboxRef } from '/@/plugin/openshell-cli/openshell-sdk-sandbox-mapper.js';
+import { DEFAULT_WORKSPACE } from '/@/plugin/openshell-cli/openshell-utils.js';
 import type {
   AcpAttachment,
   AcpElicitationResponseData,
@@ -46,7 +47,7 @@ import type {
 import type { AgentInfo } from '/@api/agent-info.js';
 import { ApiSenderType } from '/@api/api-sender/api-sender-type.js';
 import type { SandboxInfo } from '/@api/openshell-gateway-info.js';
-import { AGENT_LABEL, DEFAULT_WORKSPACE } from '/@api/openshell-gateway-info.js';
+import { AGENT_LABEL } from '/@api/openshell-gateway-info.js';
 
 import { createAcpDebug } from './acp-debug.js';
 

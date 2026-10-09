@@ -19,8 +19,7 @@
 import type { OpenShellClient } from '@nvidia/openshell-sdk';
 import { beforeEach, describe, expect, type Mock, test, vi } from 'vitest';
 
-import { DEFAULT_WORKSPACE_SCOPE } from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
-import { DEFAULT_WORKSPACE } from '/@api/openshell-gateway-info.js';
+import { DEFAULT_WORKSPACE, DEFAULT_WORKSPACE_SCOPE } from '/@/plugin/openshell-cli/openshell-utils.js';
 import type { SecretCreateOptions } from '/@api/secret-info.js';
 
 import { GcloudAdcProviderFactory, readGcloudAdc } from './gcloud-adc-provider-factory.js';

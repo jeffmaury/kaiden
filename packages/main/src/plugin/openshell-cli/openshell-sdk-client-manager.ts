@@ -16,14 +16,12 @@
  * SPDX-License-Identifier: Apache-2.0
  ***********************************************************************/
 
-import { create } from '@bufbuild/protobuf';
 import type { OpenShellClient } from '@nvidia/openshell-sdk';
-import { WorkspaceSelectorSchema } from '@nvidia/openshell-sdk/raw';
 import { inject, injectable, preDestroy } from 'inversify';
 
 import { OpenshellGatewayConfig } from '/@/plugin/openshell-cli/openshell-gateway-config.js';
 import { OpenshellGatewayManager } from '/@/plugin/openshell-cli/openshell-gateway-manager.js';
-import { DEFAULT_WORKSPACE, GatewayMetadata, WORKSPACE_SCOPE } from '/@api/openshell-gateway-info.js';
+import { GatewayMetadata } from '/@api/openshell-gateway-info.js';
 
 /**
  * Cached factory for OpenShell SDK clients. Resolves gateway metadata from
@@ -32,13 +30,6 @@ import { DEFAULT_WORKSPACE, GatewayMetadata, WORKSPACE_SCOPE } from '/@api/opens
  *
  * Clients are lazy — no network request is made until the first RPC.
  */
-
-export const DEFAULT_WORKSPACE_SCOPE = create(WorkspaceSelectorSchema, {
-  selection: {
-    case: WORKSPACE_SCOPE,
-    value: DEFAULT_WORKSPACE,
-  },
-});
 
 @injectable()
 export class OpenshellSdkClientManager {

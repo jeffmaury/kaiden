@@ -39,6 +39,7 @@ import { OpenshellNetworkPolicy } from '/@/plugin/openshell-cli/openshell-networ
 import { OpenshellPolicyManager } from '/@/plugin/openshell-cli/openshell-policy-manager.js';
 import { OpenshellSdkClientManager } from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
 import { mapSdkSandboxRef } from '/@/plugin/openshell-cli/openshell-sdk-sandbox-mapper.js';
+import { DEFAULT_WORKSPACE } from '/@/plugin/openshell-cli/openshell-utils.js';
 import { ProviderRegistry } from '/@/plugin/provider-registry.js';
 import { SecretManager } from '/@/plugin/secret-manager/secret-manager.js';
 import { TaskManager } from '/@/plugin/tasks/task-manager.js';
@@ -59,7 +60,6 @@ import {
   AGENT_LABEL,
   CreateLocalGatewayOptions,
   decodeWorkspaceLabels,
-  DEFAULT_WORKSPACE,
   GatewayInfo,
   GatewaySandboxes,
   OpenshellBindMount,
@@ -240,9 +240,14 @@ export class AgentWorkspaceManager implements Disposable {
         task.status = 'success';
         return workspaceId;
       } catch (err: unknown) {
-        this.deleteAssociatedSecret(secretResult?.secretName, secretResult?.profileName, options.gateway).catch(
-          console.error,
-        );
+        try {
+          await this.deleteAssociatedSecret(secretResult?.secretName, secretResult?.profileName, options.gateway);
+        } catch (err: unknown) {
+          console.error(
+            `Error while cleaning credentials after workspace ${sandboxName} on gateway ${gateway} creation error`,
+            err,
+          );
+        }
         throw err;
       }
     } catch (err: unknown) {

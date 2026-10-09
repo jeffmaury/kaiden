@@ -27,10 +27,8 @@ import {
 import { beforeEach, describe, expect, type Mock, test, vi } from 'vitest';
 
 import { OpenshellNetworkPolicy } from '/@/plugin/openshell-cli/openshell-network-policy.js';
-import {
-  DEFAULT_WORKSPACE_SCOPE,
-  OpenshellSdkClientManager,
-} from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
+import { OpenshellSdkClientManager } from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
+import { DEFAULT_WORKSPACE_SCOPE } from '/@/plugin/openshell-cli/openshell-utils.js';
 import { OpenShellRegistry } from '/@/plugin/openshell-registry.js';
 import { Properties } from '/@/plugin/util/properties.js';
 import type { ApiSenderType } from '/@api/api-sender/api-sender-type.js';

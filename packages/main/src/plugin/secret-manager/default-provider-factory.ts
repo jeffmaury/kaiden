@@ -19,9 +19,8 @@
 import type { OpenShellClient } from '@nvidia/openshell-sdk';
 import { injectable } from 'inversify';
 
-import { DEFAULT_WORKSPACE_SCOPE } from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
+import { DEFAULT_WORKSPACE, DEFAULT_WORKSPACE_SCOPE } from '/@/plugin/openshell-cli/openshell-utils.js';
 import { ProviderFactory } from '/@/plugin/secret-manager/provider-factory.js';
-import { DEFAULT_WORKSPACE } from '/@api/openshell-gateway-info.js';
 import type { SecretCreateOptions } from '/@api/secret-info.js';
 
 @injectable()

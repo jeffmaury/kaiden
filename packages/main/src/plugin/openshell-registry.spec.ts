@@ -337,27 +337,70 @@ describe('OpenShellRegistry', () => {
       expect(profiles[0]!.credentials[0]!.envVars).toEqual(['OPENAI_API_KEY']);
     });
 
-    test('parses category, credential strategy, enforcement, and access fields', () => {
-      const yaml = [
-        'id: provider-with-enums',
-        'display_name: Provider with enums',
-        'category: inference',
-        'credentials:',
-        '  - refresh:',
-        '      strategy: oauth2_refresh_token',
-        'endpoints:',
-        '  - enforcement: audit',
-        '    access: read-write',
-      ].join('\n');
-
+    test.each([
+      ['unspecified', ProviderProfileCategory.UNSPECIFIED],
+      ['other', ProviderProfileCategory.OTHER],
+      ['inference', ProviderProfileCategory.INFERENCE],
+      ['agent', ProviderProfileCategory.AGENT],
+      ['source_control', ProviderProfileCategory.SOURCE_CONTROL],
+      ['messaging', ProviderProfileCategory.MESSAGING],
+      ['data', ProviderProfileCategory.DATA],
+      ['knowledge', ProviderProfileCategory.KNOWLEDGE],
+    ])('parses category %s', (yamlValue, expected) => {
+      const yaml = `id: cat-test\ndisplay_name: Test\ncategory: ${yamlValue}\n`;
       registry.registerProfile(yaml);
-
       const profile = registry.getProfiles()[0];
       assert(profile);
-      expect(profile.category).toBe(ProviderProfileCategory.INFERENCE);
-      expect(profile.credentials[0]?.refresh?.strategy).toBe(ProviderCredentialRefreshStrategy.OAUTH2_REFRESH_TOKEN);
-      expect(profile.endpoints[0]?.enforcement).toBe(NetworkEnforcementMode.AUDIT);
-      expect(profile.endpoints[0]?.access).toBe(NetworkAccessPreset.READ_WRITE);
+      expect(profile.category).toBe(expected);
+    });
+
+    test.each([
+      ['unspecified', ProviderCredentialRefreshStrategy.UNSPECIFIED],
+      ['static', ProviderCredentialRefreshStrategy.STATIC],
+      ['external', ProviderCredentialRefreshStrategy.EXTERNAL],
+      ['oauth2_refresh_token', ProviderCredentialRefreshStrategy.OAUTH2_REFRESH_TOKEN],
+      ['oauth2_client_credentials', ProviderCredentialRefreshStrategy.OAUTH2_CLIENT_CREDENTIALS],
+      ['google_service_account_jwt', ProviderCredentialRefreshStrategy.GOOGLE_SERVICE_ACCOUNT_JWT],
+      ['aws_sts_assume_role', ProviderCredentialRefreshStrategy.AWS_STS_ASSUME_ROLE],
+    ])('parses credential refresh strategy %s', (yamlValue, expected) => {
+      const yaml = [
+        'id: strategy-test',
+        'display_name: Test',
+        'credentials:',
+        '  - refresh:',
+        `      strategy: ${yamlValue}`,
+      ].join('\n');
+      registry.registerProfile(yaml);
+      const profile = registry.getProfiles()[0];
+      assert(profile);
+      expect(profile.credentials[0]?.refresh?.strategy).toBe(expected);
+    });
+
+    test.each([
+      ['unspecified', NetworkEnforcementMode.UNSPECIFIED],
+      ['enforce', NetworkEnforcementMode.ENFORCE],
+      ['audit', NetworkEnforcementMode.AUDIT],
+    ])('parses enforcement mode %s', (yamlValue, expected) => {
+      const yaml = ['id: enforcement-test', 'display_name: Test', 'endpoints:', `  - enforcement: ${yamlValue}`].join(
+        '\n',
+      );
+      registry.registerProfile(yaml);
+      const profile = registry.getProfiles()[0];
+      assert(profile);
+      expect(profile.endpoints[0]?.enforcement).toBe(expected);
+    });
+
+    test.each([
+      ['unspecified', NetworkAccessPreset.UNSPECIFIED],
+      ['read-only', NetworkAccessPreset.READ_ONLY],
+      ['read-write', NetworkAccessPreset.READ_WRITE],
+      ['full', NetworkAccessPreset.FULL],
+    ])('parses network access preset %s', (yamlValue, expected) => {
+      const yaml = ['id: access-test', 'display_name: Test', 'endpoints:', `  - access: ${yamlValue}`].join('\n');
+      registry.registerProfile(yaml);
+      const profile = registry.getProfiles()[0];
+      assert(profile);
+      expect(profile.endpoints[0]?.access).toBe(expected);
     });
 
     test('uses the unspecified enum value for unknown field names', () => {

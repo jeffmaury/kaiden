@@ -27,10 +27,8 @@ import {
 import { inject, injectable, multiInject } from 'inversify';
 
 import { OpenshellNetworkPolicy } from '/@/plugin/openshell-cli/openshell-network-policy.js';
-import {
-  DEFAULT_WORKSPACE_SCOPE,
-  OpenshellSdkClientManager,
-} from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
+import { OpenshellSdkClientManager } from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
+import { DEFAULT_WORKSPACE_SCOPE } from '/@/plugin/openshell-cli/openshell-utils.js';
 import { OpenShellRegistry } from '/@/plugin/openshell-registry.js';
 import { DefaultProviderFactory } from '/@/plugin/secret-manager/default-provider-factory.js';
 import { type CreateProfileOptions, type OpenshellProfile } from '/@api/openshell-gateway-info.js';

@@ -96,8 +96,6 @@ export const WORKSPACE_LABEL = 'ai.openkaiden.kaiden.workspace';
 export const AGENT_LABEL = 'ai.openkaiden.kaiden.agent';
 export const SECRET_LABEL = 'ai.openkaiden.kaiden.secret';
 export const PROFILE_LABEL = 'ai.openkaiden.kaiden.profile';
-export const DEFAULT_WORKSPACE = 'default';
-export const WORKSPACE_SCOPE = 'workspace';
 
 export function decodeWorkspaceLabels(labels: Record<string, string>): string | undefined {
   let encoded: string;

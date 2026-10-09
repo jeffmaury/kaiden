@@ -18,7 +18,9 @@
 
 import { randomUUID } from 'node:crypto';
 
+import { create } from '@bufbuild/protobuf';
 import type { OpenShellClient } from '@nvidia/openshell-sdk';
+import { ProviderProfileSchema } from '@nvidia/openshell-sdk/raw';
 import type { FileSystemWatcher, InferenceProviderConnection } from '@openkaiden/api';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
@@ -27,10 +29,8 @@ import type { FilesystemMonitoring } from '/@/plugin/filesystem-monitoring.js';
 import type { OpenshellGateway } from '/@/plugin/openshell-cli/openshell-gateway.js';
 import type { OpenshellGatewayStateManager } from '/@/plugin/openshell-cli/openshell-gateway-state-manager.js';
 import { OpenshellNetworkPolicy } from '/@/plugin/openshell-cli/openshell-network-policy.js';
-import {
-  DEFAULT_WORKSPACE_SCOPE,
-  OpenshellSdkClientManager,
-} from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
+import { OpenshellSdkClientManager } from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
+import { DEFAULT_WORKSPACE, DEFAULT_WORKSPACE_SCOPE } from '/@/plugin/openshell-cli/openshell-utils.js';
 import { OpenShellRegistry } from '/@/plugin/openshell-registry.js';
 import type { ProviderImpl } from '/@/plugin/provider-impl.js';
 import type { ProviderRegistry } from '/@/plugin/provider-registry.js';
@@ -38,7 +38,6 @@ import type { SafeStorageRegistry } from '/@/plugin/safe-storage/safe-storage-re
 import { Properties } from '/@/plugin/util/properties.js';
 import type { ApiSenderType } from '/@api/api-sender/api-sender-type.js';
 import type { IConfigurationRegistry } from '/@api/configuration/models.js';
-import { DEFAULT_WORKSPACE } from '/@api/openshell-gateway-info.js';
 import type { SecretCreateOptions } from '/@api/secret-info.js';
 
 import { DefaultProviderFactory } from './default-provider-factory.js';
@@ -333,55 +332,6 @@ describe('openshellAdapter', () => {
   });
 });
 
-describe('inference connection lifecycle', () => {
-  const mockConnection: InferenceProviderConnection = {
-    id: 'conn-123',
-    name: 'test-connection',
-    type: 'cloud',
-    sdk: {} as InferenceProviderConnection['sdk'],
-    status: () => 'started',
-    models: [{ label: 'model-1' }],
-    credentials: () => ({ token: 'secret-token' }),
-  };
-
-  test('getSecretForModel returns SecretInfo matching by name', async () => {
-    vi.mocked(providerRegistry.getInferenceConnection).mockReturnValue({
-      connection: mockConnection,
-      providerId: 'kaiden.cursor',
-    });
-    mockRaw.listProviders.mockResolvedValue({
-      providers: [
-        { metadata: { name: 'other-provider' }, type: 'other' },
-        { metadata: { name: 'kaiden.cursor-conn-123' }, type: 'cursor' },
-      ],
-    });
-
-    const secret = await manager.getSecretForModel('cursor::model-1::', 'remote');
-    expect(secret).toMatchObject({ name: 'kaiden.cursor-conn-123', type: 'cursor' });
-    expect(sdkClientManager.getClient).toHaveBeenCalledWith('remote');
-  });
-
-  test('getSecretForModel returns undefined for unknown model', async () => {
-    vi.mocked(providerRegistry.getInferenceConnection).mockReturnValue(undefined);
-
-    const secret = await manager.getSecretForModel('unknown::model::');
-    expect(secret).toBeUndefined();
-  });
-
-  test('getSecretForModel returns correct type for vertex-ai provider', async () => {
-    vi.mocked(providerRegistry.getInferenceConnection).mockReturnValue({
-      connection: mockConnection,
-      providerId: 'kaiden.vertex-ai',
-    });
-    mockRaw.listProviders.mockResolvedValue({
-      providers: [{ metadata: { name: 'kaiden.vertex-ai-conn-123' }, type: 'vertex-ai' }],
-    });
-
-    const secret = await manager.getSecretForModel('vertexai::model-1::');
-    expect(secret).toMatchObject({ name: 'kaiden.vertex-ai-conn-123', type: 'vertex-ai' });
-  });
-});
-
 describe('ensureSecretForSandbox', () => {
   const mockConnection: InferenceProviderConnection = {
     id: 'conn-sandbox',
@@ -403,8 +353,8 @@ describe('ensureSecretForSandbox', () => {
       extensionId: 'kaiden.openai',
     } as unknown as ProviderImpl);
     vi.mocked(openshellRegistry.getProfiles).mockReturnValue([
-      { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [] },
-    ] as never);
+      create(ProviderProfileSchema, { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [] }),
+    ]);
     mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
 
     const properties = {
@@ -456,8 +406,8 @@ describe('ensureSecretForSandbox', () => {
       extensionId: 'kaiden.openai',
     } as unknown as ProviderImpl);
     vi.mocked(openshellRegistry.getProfiles).mockReturnValue([
-      { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [] },
-    ] as never);
+      create(ProviderProfileSchema, { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [] }),
+    ]);
     mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
 
     const properties = {
@@ -486,7 +436,6 @@ describe('ensureSecretForSandbox', () => {
     vi.mocked(extensionStorageMock.get).mockResolvedValue('actual-api-key');
     mockRaw.createProvider.mockRejectedValue(new Error(`Can't create provider`));
 
-    const spy = vi.spyOn(manager, 'removeProfile');
     await expect(manager.ensureSecretForSandbox('my-sandbox', 'openai::gpt-4::', 'claude', 'kaiden')).rejects.toThrow(
       /Can't create provider/,
     );
@@ -499,7 +448,11 @@ describe('ensureSecretForSandbox', () => {
         }),
       }),
     );
-    expect(spy).toHaveBeenCalledWith('my-sandbox-00-01-02-03-04', 'kaiden');
+    expect(mockRaw.deleteProviderProfile).toHaveBeenCalledWith({
+      id: 'my-sandbox-00-01-02-03-04',
+      allowMissing: true,
+      workspaceScope: DEFAULT_WORKSPACE_SCOPE,
+    });
   });
 
   test('returns undefined when no inference connection exists', async () => {
@@ -515,8 +468,8 @@ describe('ensureSecretForSandbox', () => {
 describe('resolveProfileForAgent', () => {
   test('clones profile when no binaries field (absence means no binary authorised)', async () => {
     vi.mocked(openshellRegistry.getProfiles).mockReturnValue([
-      { id: 'openai', displayName: 'OpenAI', credentials: [] },
-    ] as never);
+      create(ProviderProfileSchema, { id: 'openai', displayName: 'OpenAI', credentials: [] }),
+    ]);
     mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
 
     const result = await manager.resolveProfileForAgent({
@@ -544,8 +497,8 @@ describe('resolveProfileForAgent', () => {
 
   test('clones profile when binaries is empty (no binary authorised)', async () => {
     vi.mocked(openshellRegistry.getProfiles).mockReturnValue([
-      { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [] },
-    ] as never);
+      create(ProviderProfileSchema, { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [] }),
+    ]);
     mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
 
     const result = await manager.resolveProfileForAgent({
@@ -573,13 +526,13 @@ describe('resolveProfileForAgent', () => {
 
   test('clones profile with existing binaries when agent command already matches', async () => {
     vi.mocked(openshellRegistry.getProfiles).mockReturnValue([
-      {
+      create(ProviderProfileSchema, {
         id: 'openai',
         displayName: 'OpenAI',
         credentials: [],
         binaries: [{ path: '**/claude' }, { path: '/usr/bin/node' }],
-      },
-    ] as never);
+      }),
+    ]);
     mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
 
     const result = await manager.resolveProfileForAgent({
@@ -609,8 +562,13 @@ describe('resolveProfileForAgent', () => {
 
   test('clones profile when agent command is not in binaries', async () => {
     vi.mocked(openshellRegistry.getProfiles).mockReturnValue([
-      { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [{ path: '/usr/bin/node' }] },
-    ] as never);
+      create(ProviderProfileSchema, {
+        id: 'openai',
+        displayName: 'OpenAI',
+        credentials: [],
+        binaries: [{ path: '/usr/bin/node' }],
+      }),
+    ]);
     mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
 
     const result = await manager.resolveProfileForAgent({
@@ -641,8 +599,13 @@ describe('resolveProfileForAgent', () => {
 
   test('clones profile with absolute agent command', async () => {
     vi.mocked(openshellRegistry.getProfiles).mockReturnValue([
-      { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [{ path: '/usr/bin/node' }] },
-    ] as never);
+      create(ProviderProfileSchema, {
+        id: 'openai',
+        displayName: 'OpenAI',
+        credentials: [],
+        binaries: [{ path: '/usr/bin/node' }],
+      }),
+    ]);
     mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
 
     const result = await manager.resolveProfileForAgent({
@@ -673,8 +636,13 @@ describe('resolveProfileForAgent', () => {
 
   test('passes gateway when cloning profile', async () => {
     vi.mocked(openshellRegistry.getProfiles).mockReturnValue([
-      { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [{ path: '/usr/bin/node' }] },
-    ] as never);
+      create(ProviderProfileSchema, {
+        id: 'openai',
+        displayName: 'OpenAI',
+        credentials: [],
+        binaries: [{ path: '/usr/bin/node' }],
+      }),
+    ]);
     mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
 
     await manager.resolveProfileForAgent({
@@ -705,8 +673,8 @@ describe('resolveProfileForAgent', () => {
 
   test('uses sandbox name in cloned profile name regardless of endpoint', async () => {
     vi.mocked(openshellRegistry.getProfiles).mockReturnValue([
-      { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [] },
-    ] as never);
+      create(ProviderProfileSchema, { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [] }),
+    ]);
     mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
 
     const endpoint = 'http://localhost:11434/v1';
@@ -732,8 +700,8 @@ describe('resolveProfileForAgent', () => {
 
   test('uses sandbox name without endpoint', async () => {
     vi.mocked(openshellRegistry.getProfiles).mockReturnValue([
-      { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [] },
-    ] as never);
+      create(ProviderProfileSchema, { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [] }),
+    ]);
     mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
 
     const result = await manager.resolveProfileForAgent({
@@ -748,8 +716,14 @@ describe('resolveProfileForAgent', () => {
 
   test('passes endpoint to createProfile when cloning', async () => {
     vi.mocked(openshellRegistry.getProfiles).mockReturnValue([
-      { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [], endpoints: [] },
-    ] as never);
+      create(ProviderProfileSchema, {
+        id: 'openai',
+        displayName: 'OpenAI',
+        credentials: [],
+        binaries: [],
+        endpoints: [],
+      }),
+    ]);
     mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
 
     const endpoint = 'http://localhost:11434/v1';
@@ -781,8 +755,13 @@ describe('resolveProfileForAgent', () => {
 
   test('returns undefined without cloning for google-vertex-ai profile', async () => {
     vi.mocked(openshellRegistry.getProfiles).mockReturnValue([
-      { id: 'google-vertex-ai', displayName: 'Google Vertex AI', credentials: [], binaries: [{ path: '/**' }] },
-    ] as never);
+      create(ProviderProfileSchema, {
+        id: 'google-vertex-ai',
+        displayName: 'Google Vertex AI',
+        credentials: [],
+        binaries: [{ path: '/**' }],
+      }),
+    ]);
     mockRaw.listProviderProfiles.mockResolvedValue({
       profiles: [{ id: 'google-vertex-ai' }],
     });
@@ -799,13 +778,13 @@ describe('resolveProfileForAgent', () => {
   });
 
   test('imports google-vertex-ai profile to gateway when not present', async () => {
-    const registryProfile = {
+    const registryProfile = create(ProviderProfileSchema, {
       id: 'google-vertex-ai',
       displayName: 'Google Vertex AI',
       credentials: [],
       binaries: [{ path: '/**' }],
-    };
-    vi.mocked(openshellRegistry.getProfiles).mockReturnValue([registryProfile] as never);
+    });
+    vi.mocked(openshellRegistry.getProfiles).mockReturnValue([registryProfile]);
     mockRaw.listProviderProfiles.mockResolvedValue({ profiles: [] });
     mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
 

@@ -39,25 +39,25 @@ import { Disposable } from './types/disposable.js';
 
 const categories = new Map<string, number>(
   Object.entries(ProviderProfileCategory)
-    .filter((k): k is [string, number] => isNaN(Number(k)))
+    .filter((k): k is [string, number] => typeof k[1] === 'number')
     .map(k => [k[0].toLowerCase(), k[1]]),
 );
 
 const strategies = new Map<string, number>(
   Object.entries(ProviderCredentialRefreshStrategy)
-    .filter((k): k is [string, number] => isNaN(Number(k)))
+    .filter((k): k is [string, number] => typeof k[1] === 'number')
     .map(k => [k[0].toLowerCase(), k[1]]),
 );
 
 const enforcements = new Map<string, number>(
   Object.entries(NetworkEnforcementMode)
-    .filter((k): k is [string, number] => isNaN(Number(k)))
+    .filter((k): k is [string, number] => typeof k[1] === 'number')
     .map(k => [k[0].toLowerCase(), k[1]]),
 );
 
 const accesses = new Map<string, number>(
   Object.entries(NetworkAccessPreset)
-    .filter((k): k is [string, number] => isNaN(Number(k)))
+    .filter((k): k is [string, number] => typeof k[1] === 'number')
     .map(k => [k[0].toLowerCase().replace('_', '-'), k[1]]),
 );
 

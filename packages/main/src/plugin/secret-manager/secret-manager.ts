@@ -123,17 +123,6 @@ export class SecretManager {
     return this.cli.listServices(gateway);
   }
 
-  async getSecretForModel(modelId: string, gateway?: string): Promise<SecretInfo | undefined> {
-    const info = this.providerRegistry.getInferenceConnection(modelId);
-    if (!info) return undefined;
-
-    const expectedName = `${info.providerId}-${info.connection.id}`;
-    const secrets = await this.list(gateway);
-    const secret = secrets.find(s => s.name === expectedName);
-    if (!secret) return undefined;
-    return secret;
-  }
-
   /**
    * Ensure a secret exists for a sandbox. The secret is named
    * `$sandboxName-$uuid` and is linked to the sandbox rather than
@@ -199,7 +188,11 @@ export class SecretManager {
       return { secretName, clonedProfile };
     } catch (err: unknown) {
       if (clonedProfile) {
-        this.removeProfile(clonedProfile, gateway).catch(console.error);
+        try {
+          await this.removeProfile(clonedProfile, gateway);
+        } catch (err: unknown) {
+          console.error(`Error while deleting profile ${clonedProfile} on gateway ${gateway}`, err);
+        }
       }
       throw err;
     }
