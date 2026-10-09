@@ -18,7 +18,12 @@
 
 import { create } from '@bufbuild/protobuf';
 import type { OpenShellClient } from '@nvidia/openshell-sdk';
-import { NetworkEndpointSchema } from '@nvidia/openshell-sdk/raw';
+import {
+  ImportProviderProfilesRequestSchema,
+  NetworkAccessPreset,
+  NetworkEndpointSchema,
+  ProviderProfileSchema,
+} from '@nvidia/openshell-sdk/raw';
 import { beforeEach, describe, expect, type Mock, test, vi } from 'vitest';
 
 import { OpenshellNetworkPolicy } from '/@/plugin/openshell-cli/openshell-network-policy.js';
@@ -26,7 +31,9 @@ import {
   DEFAULT_WORKSPACE_SCOPE,
   OpenshellSdkClientManager,
 } from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
-import type { OpenShellRegistry } from '/@/plugin/openshell-registry.js';
+import { OpenShellRegistry } from '/@/plugin/openshell-registry.js';
+import { Properties } from '/@/plugin/util/properties.js';
+import type { ApiSenderType } from '/@api/api-sender/api-sender-type.js';
 import type { SecretCreateOptions } from '/@api/secret-info.js';
 
 import { DefaultProviderFactory } from './default-provider-factory.js';
@@ -34,6 +41,14 @@ import { GcloudAdcProviderFactory } from './gcloud-adc-provider-factory.js';
 import { OpenshellSecretAdapter } from './openshell-secret-adapter.js';
 
 vi.mock(import('/@/plugin/openshell-cli/openshell-sdk-client-manager.js'));
+vi.mock(import('/@/plugin/openshell-registry.js'));
+
+const apiSender: ApiSenderType = {
+  send: vi.fn(),
+  receive: vi.fn(),
+};
+
+const properties = new Properties();
 
 let adapter: OpenshellSecretAdapter;
 let mockRaw: {
@@ -69,9 +84,7 @@ beforeEach(() => {
   vi.spyOn(defaultFactory, 'createProvider').mockResolvedValue(undefined);
   vi.spyOn(gcloudFactory, 'createProvider').mockResolvedValue(undefined);
 
-  openshellRegistry = {
-    getProfiles: vi.fn().mockReturnValue([]),
-  } as unknown as OpenShellRegistry;
+  openshellRegistry = new OpenShellRegistry(apiSender, properties);
 
   adapter = new OpenshellSecretAdapter(
     sdkClientManager,
@@ -285,8 +298,14 @@ describe('createProfile', () => {
   test('appends parsed endpoint to cloned profile endpoints', async () => {
     const baseEndpoints = [{ host: 'api.openai.com', port: 443 }];
     vi.mocked(openshellRegistry.getProfiles).mockReturnValue([
-      { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [], endpoints: baseEndpoints },
-    ] as never);
+      create(ProviderProfileSchema, {
+        id: 'openai',
+        displayName: 'OpenAI',
+        credentials: [],
+        binaries: [],
+        endpoints: baseEndpoints,
+      }),
+    ]);
     mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
 
     await adapter.createProfile({
@@ -297,21 +316,32 @@ describe('createProfile', () => {
     });
 
     expect(mockRaw.importProviderProfiles).toHaveBeenCalledWith(
-      expect.objectContaining({
+      create(ImportProviderProfilesRequestSchema, {
         profiles: [
-          expect.objectContaining({
-            profile: expect.objectContaining({
-              endpoints: expect.arrayContaining([
+          {
+            profile: {
+              displayName: 'OpenAI',
+              id: 'openai-claude',
+              endpoints: [
                 ...baseEndpoints,
-                expect.objectContaining({
+                {
                   host: 'host.openshell.internal',
                   port: 11434,
                   protocol: 'rest',
-                }),
-              ]),
-            }),
-          }),
+                  access: NetworkAccessPreset.FULL,
+                  allowEncodedSlash: true,
+                },
+              ],
+              binaries: [
+                {
+                  path: '/**/claude',
+                },
+              ],
+            },
+            source: 'cloned from openai',
+          },
         ],
+        workspaceScope: DEFAULT_WORKSPACE_SCOPE,
       }),
     );
   });
@@ -319,7 +349,13 @@ describe('createProfile', () => {
   test('does not modify endpoints when endpoint URL is invalid', async () => {
     const baseEndpoints = [create(NetworkEndpointSchema, { host: 'api.openai.com', port: 443 })];
     vi.mocked(openshellRegistry.getProfiles).mockReturnValue([
-      { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [], endpoints: baseEndpoints },
+      create(ProviderProfileSchema, {
+        id: 'openai',
+        displayName: 'OpenAI',
+        credentials: [],
+        binaries: [],
+        endpoints: baseEndpoints,
+      }),
     ] as never);
     mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
 
@@ -346,7 +382,13 @@ describe('createProfile', () => {
   test('skips adding endpoint when existing endpoint matches exactly', async () => {
     const baseEndpoints = [create(NetworkEndpointSchema, { host: 'api.openai.com', port: 443 })];
     vi.mocked(openshellRegistry.getProfiles).mockReturnValue([
-      { id: 'openai', displayName: 'OpenAI', credentials: [], binaries: [], endpoints: baseEndpoints },
+      create(ProviderProfileSchema, {
+        id: 'openai',
+        displayName: 'OpenAI',
+        credentials: [],
+        binaries: [],
+        endpoints: baseEndpoints,
+      }),
     ] as never);
     mockRaw.importProviderProfiles.mockResolvedValue({ imported: true, diagnostics: [] });
 

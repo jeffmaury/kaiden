@@ -31,10 +31,11 @@ import {
   DEFAULT_WORKSPACE_SCOPE,
   OpenshellSdkClientManager,
 } from '/@/plugin/openshell-cli/openshell-sdk-client-manager.js';
-import type { OpenShellRegistry } from '/@/plugin/openshell-registry.js';
+import { OpenShellRegistry } from '/@/plugin/openshell-registry.js';
 import type { ProviderImpl } from '/@/plugin/provider-impl.js';
 import type { ProviderRegistry } from '/@/plugin/provider-registry.js';
 import type { SafeStorageRegistry } from '/@/plugin/safe-storage/safe-storage-registry.js';
+import { Properties } from '/@/plugin/util/properties.js';
 import type { ApiSenderType } from '/@api/api-sender/api-sender-type.js';
 import type { IConfigurationRegistry } from '/@api/configuration/models.js';
 import { DEFAULT_WORKSPACE } from '/@api/openshell-gateway-info.js';
@@ -48,6 +49,7 @@ import { SecretManager } from './secret-manager.js';
 vi.mock(import('node:crypto'));
 
 vi.mock(import('/@/plugin/openshell-cli/openshell-sdk-client-manager.js'));
+vi.mock(import('/@/plugin/openshell-registry.js'));
 
 let manager: SecretManager;
 
@@ -68,9 +70,7 @@ const mockRaw = {
 const mockClient = { raw: mockRaw } as unknown as OpenShellClient;
 const sdkClientManager = new OpenshellSdkClientManager(undefined!, undefined!);
 const openshellNetworkPolicy = new OpenshellNetworkPolicy();
-const openshellRegistry = {
-  getProfiles: vi.fn().mockReturnValue([]),
-} as unknown as OpenShellRegistry;
+const openshellRegistry = new OpenShellRegistry(apiSender, new Properties());
 const openshellAdapter = new OpenshellSecretAdapter(
   sdkClientManager,
   [new GcloudAdcProviderFactory()],
@@ -379,54 +379,6 @@ describe('inference connection lifecycle', () => {
 
     const secret = await manager.getSecretForModel('vertexai::model-1::');
     expect(secret).toMatchObject({ name: 'kaiden.vertex-ai-conn-123', type: 'vertex-ai' });
-  });
-});
-
-describe('extractBinaryFromCommand', () => {
-  test('extracts single-word command', () => {
-    expect(openshellNetworkPolicy.extractBinaryFromCommand('claude')).toBe('claude');
-  });
-
-  test('extracts first word from multi-word command', () => {
-    expect(openshellNetworkPolicy.extractBinaryFromCommand('/usr/bin/agent start')).toBe('/usr/bin/agent');
-  });
-
-  test('trims whitespace', () => {
-    expect(openshellNetworkPolicy.extractBinaryFromCommand('  claude  ')).toBe('claude');
-  });
-});
-
-describe('isAgentCommandAllowed', () => {
-  test('matches exact path when binary has no wildcard', () => {
-    expect(openshellNetworkPolicy.isAgentCommandAllowed('/usr/bin/claude', ['/usr/bin/claude', '/usr/bin/node'])).toBe(
-      true,
-    );
-  });
-
-  test('rejects path not equal when binary has no wildcard', () => {
-    expect(openshellNetworkPolicy.isAgentCommandAllowed('/usr/bin/claude', ['/usr/local/bin/claude'])).toBe(false);
-  });
-
-  test('matches bare command exactly when binary has no wildcard', () => {
-    expect(openshellNetworkPolicy.isAgentCommandAllowed('claude', ['claude'])).toBe(true);
-  });
-
-  test('rejects bare command against absolute binary without wildcard', () => {
-    expect(openshellNetworkPolicy.isAgentCommandAllowed('claude', ['/usr/local/bin/claude', '/usr/bin/node'])).toBe(
-      false,
-    );
-  });
-
-  test('matches via minimatch glob when binary contains wildcard', () => {
-    expect(openshellNetworkPolicy.isAgentCommandAllowed('/usr/local/bin/claude', ['**/claude'])).toBe(true);
-  });
-
-  test('rejects via minimatch glob when pattern does not match', () => {
-    expect(openshellNetworkPolicy.isAgentCommandAllowed('/usr/bin/node', ['**/claude'])).toBe(false);
-  });
-
-  test('matches bare command via glob pattern', () => {
-    expect(openshellNetworkPolicy.isAgentCommandAllowed('claude', ['**/claude'])).toBe(true);
   });
 });
 

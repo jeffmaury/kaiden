@@ -18,6 +18,7 @@
 
 import { create } from '@bufbuild/protobuf';
 import {
+  ImportProviderProfilesRequestSchema,
   NetworkAccessPreset,
   NetworkBinarySchema,
   NetworkEndpointSchema,
@@ -133,15 +134,17 @@ export class OpenshellSecretAdapter implements SecretCliBackend {
       }
     }
     const client = await this.sdkClientManager.getClient(gateway);
-    const result = await client.raw.importProviderProfiles({
-      profiles: [
-        {
-          profile: cloned,
-          source: `cloned from ${options.from}`,
-        },
-      ],
-      workspaceScope: DEFAULT_WORKSPACE_SCOPE,
-    });
+    const result = await client.raw.importProviderProfiles(
+      create(ImportProviderProfilesRequestSchema, {
+        profiles: [
+          {
+            profile: cloned,
+            source: `cloned from ${options.from}`,
+          },
+        ],
+        workspaceScope: DEFAULT_WORKSPACE_SCOPE,
+      }),
+    );
     if (!result.imported) {
       throw new Error(
         `Provider profile ${cloned.id} can't be imported, diagnostics: ${JSON.stringify(result.diagnostics)}`,

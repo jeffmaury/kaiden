@@ -24,7 +24,7 @@ import {
   NetworkAccessPreset,
   NetworkEndpoint,
   NetworkEndpointSchema,
-  type SandboxPolicySchema,
+  SandboxPolicySchema,
 } from '@nvidia/openshell-sdk/raw';
 import { injectable } from 'inversify';
 
@@ -204,6 +204,6 @@ export class OpenshellNetworkPolicy {
       return undefined;
     }
 
-    return { version: 1, networkPolicies };
+    return create(SandboxPolicySchema, { version: 1, networkPolicies });
   }
 }
