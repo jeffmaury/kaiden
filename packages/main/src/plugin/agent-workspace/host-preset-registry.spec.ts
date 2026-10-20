@@ -19,18 +19,20 @@
 import type { HostPreset } from '@openkaiden/api';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
+import type { IPCHandle } from '/@/plugin/api.js';
 import type { ApiSenderType } from '/@api/api-sender/api-sender-type.js';
 
 import { HostPresetRegistry } from './host-preset-registry.js';
 
 const apiSender: ApiSenderType = { send: vi.fn(), receive: vi.fn() };
+const ipcHandle: IPCHandle = vi.fn();
 
 let registry: HostPresetRegistry;
 
 describe('HostPresetRegistry', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    registry = new HostPresetRegistry(apiSender);
+    registry = new HostPresetRegistry(apiSender, ipcHandle);
   });
 
   test('registers and returns host presets', () => {
@@ -43,6 +45,17 @@ describe('HostPresetRegistry', () => {
     const preset: HostPreset = { id: 'registries', name: 'Registries', hosts: [{ hostname: 'registry.npmjs.org' }] };
     registry.registerHostPreset(preset);
     expect(apiSender.send).toHaveBeenCalledWith('host-preset-registry:updated');
+  });
+
+  test('sends update event when a preset is removed', () => {
+    const preset: HostPreset = { id: 'registries', name: 'Registries', hosts: [{ hostname: 'registry.npmjs.org' }] };
+    const registration = registry.registerHostPreset(preset);
+
+    registration.dispose();
+
+    expect(apiSender.send).toHaveBeenCalledTimes(2);
+    expect(apiSender.send).toHaveBeenNthCalledWith(1, 'host-preset-registry:updated');
+    expect(apiSender.send).toHaveBeenNthCalledWith(2, 'host-preset-registry:updated');
   });
 
   test('rejects a duplicate preset id', () => {
