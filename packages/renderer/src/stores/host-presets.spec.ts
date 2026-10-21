@@ -18,18 +18,21 @@
 
 import type { HostPreset } from '@openkaiden/api';
 import { get } from 'svelte/store';
-import { assert, beforeAll, beforeEach, expect, test, vi } from 'vitest';
+import { assert, beforeEach, expect, test, vi } from 'vitest';
 
 import { hostPresets, hostPresetsEventStore } from './host-presets';
 
 const callbacks = new Map<string, () => void>();
 
-beforeAll(() => {
-  window.addEventListener = vi.fn();
-});
-
 beforeEach(() => {
   vi.resetAllMocks();
+  hostPresets.set([]);
+  callbacks.clear();
+  Object.defineProperty(window, 'addEventListener', {
+    value: vi.fn(),
+    configurable: true,
+    writable: true,
+  });
   vi.mocked(window.addEventListener).mockImplementation(
     (type: string, callback: EventListenerOrEventListenerObject): void => {
       callbacks.set(type, callback as () => void);
