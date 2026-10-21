@@ -35,6 +35,11 @@ describe('HostPresetRegistry', () => {
     registry = new HostPresetRegistry(apiSender, ipcHandle);
   });
 
+  test('init register handler', () => {
+    registry.init();
+    expect(ipcHandle).toHaveBeenCalledWith('host-preset-registry:getHostPresets', expect.any(Function));
+  });
+
   test('registers and returns host presets', () => {
     const preset: HostPreset = { id: 'registries', name: 'Registries', hosts: [{ hostname: 'registry.npmjs.org' }] };
     registry.registerHostPreset(preset);
