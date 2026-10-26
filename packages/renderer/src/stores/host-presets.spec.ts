@@ -20,36 +20,71 @@ import type { HostPreset } from '@openkaiden/api';
 import { get } from 'svelte/store';
 import { assert, beforeEach, expect, test, vi } from 'vitest';
 
-import { hostPresets, hostPresetsEventStore } from './host-presets';
+import type * as HostPresetsModule from './host-presets';
 
-const callbacks = new Map<string, () => void>();
+const eventCallbacks = new Map<string, (...args: unknown[]) => void>();
+const windowListeners = new Map<string, EventListenerOrEventListenerObject>();
+let hostPresetsModule: typeof HostPresetsModule | undefined;
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.resetAllMocks();
-  hostPresets.set([]);
-  callbacks.clear();
-  Object.defineProperty(window, 'addEventListener', {
-    value: vi.fn(),
-    configurable: true,
-    writable: true,
-  });
-  vi.mocked(window.addEventListener).mockImplementation(
-    (type: string, callback: EventListenerOrEventListenerObject): void => {
-      callbacks.set(type, callback as () => void);
-    },
-  );
-  Object.defineProperty(window, 'events', {
-    value: {
+  eventCallbacks.clear();
+  windowListeners.clear();
+  Object.assign(window, {
+    addEventListener: vi.fn(),
+    events: {
       send: vi.fn(),
       receive: vi.fn(),
     },
-    configurable: true,
-    writable: true,
   });
-  vi.mocked(window.events.receive).mockImplementation((channel, func) => {
-    callbacks.set(channel, func);
+  vi.mocked(window.addEventListener).mockImplementation(
+    (type: string, callback: EventListenerOrEventListenerObject): void => {
+      windowListeners.set(type, callback);
+    },
+  );
+  vi.mocked(window.events.receive).mockImplementation((channel, callback) => {
+    eventCallbacks.set(channel, callback);
     return { dispose: vi.fn() };
   });
+
+  vi.resetModules();
+  const jeff = await import('./host-presets');
+  console.log(jeff);
+  hostPresetsModule = await import('./host-presets');
+  hostPresetsModule.hostPresets.set([]);
+});
+
+test('waits for extensions to start before fetching host presets', async () => {
+  const presets: HostPreset[] = [
+    {
+      id: 'registries',
+      name: 'Registries',
+      description: 'Package registries',
+      hosts: [{ hostname: 'registry.npmjs.org' }],
+    },
+  ];
+  vi.mocked(window.getHostPresets).mockResolvedValue(presets);
+  assert(hostPresetsModule);
+  const { hostPresets } = hostPresetsModule;
+
+  const hostPresetRegistryUpdatedCallback = eventCallbacks.get('host-preset-registry:updated');
+  assert(hostPresetRegistryUpdatedCallback);
+  hostPresetRegistryUpdatedCallback();
+
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(window.getHostPresets).not.toHaveBeenCalled();
+  expect(get(hostPresets)).toStrictEqual([]);
+
+  const extensionsAlreadyStartedCallback = windowListeners.get('extensions-already-started');
+  assert(extensionsAlreadyStartedCallback);
+  if (typeof extensionsAlreadyStartedCallback === 'function') {
+    extensionsAlreadyStartedCallback(new Event('extensions-already-started'));
+  } else {
+    extensionsAlreadyStartedCallback.handleEvent(new Event('extensions-already-started'));
+  }
+
+  await vi.waitFor(() => expect(get(hostPresets)).toStrictEqual(presets));
 });
 
 test('fetches registered host presets into the store', async () => {
@@ -62,11 +97,16 @@ test('fetches registered host presets into the store', async () => {
     },
   ];
   vi.mocked(window.getHostPresets).mockResolvedValue(presets);
-  hostPresetsEventStore.setup();
+  assert(hostPresetsModule);
+  const { hostPresets } = hostPresetsModule;
 
-  const extensionsAlreadyStartedCallback = callbacks.get('extensions-already-started');
+  const extensionsAlreadyStartedCallback = windowListeners.get('extensions-already-started');
   assert(extensionsAlreadyStartedCallback);
-  extensionsAlreadyStartedCallback();
+  if (typeof extensionsAlreadyStartedCallback === 'function') {
+    extensionsAlreadyStartedCallback(new Event('extensions-already-started'));
+  } else {
+    extensionsAlreadyStartedCallback.handleEvent(new Event('extensions-already-started'));
+  }
 
   await vi.waitFor(() => expect(window.getHostPresets).toHaveBeenCalledOnce());
   expect(get(hostPresets)).toStrictEqual(presets);
@@ -92,17 +132,22 @@ test('updates the store when a host preset changes', async () => {
   ];
 
   vi.mocked(window.getHostPresets).mockResolvedValue(initialPresets);
-  hostPresetsEventStore.setup();
+  assert(hostPresetsModule);
+  const { hostPresets } = hostPresetsModule;
 
-  const extensionsAlreadyStartedCallback = callbacks.get('extensions-already-started');
+  const extensionsAlreadyStartedCallback = windowListeners.get('extensions-already-started');
   assert(extensionsAlreadyStartedCallback);
-  extensionsAlreadyStartedCallback();
+  if (typeof extensionsAlreadyStartedCallback === 'function') {
+    extensionsAlreadyStartedCallback(new Event('extensions-already-started'));
+  } else {
+    extensionsAlreadyStartedCallback.handleEvent(new Event('extensions-already-started'));
+  }
 
   await vi.waitFor(() => expect(get(hostPresets)).toStrictEqual(initialPresets));
 
   vi.mocked(window.getHostPresets).mockResolvedValue(updatedPresets);
 
-  const hostPresetRegistryUpdatedCallBack = callbacks.get('host-preset-registry:updated');
+  const hostPresetRegistryUpdatedCallBack = eventCallbacks.get('host-preset-registry:updated');
   assert(hostPresetRegistryUpdatedCallBack);
   hostPresetRegistryUpdatedCallBack();
 

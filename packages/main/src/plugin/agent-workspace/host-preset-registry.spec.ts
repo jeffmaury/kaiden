@@ -17,7 +17,7 @@
  ***********************************************************************/
 
 import type { HostPreset } from '@openkaiden/api';
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { assert, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { IPCHandle } from '/@/plugin/api.js';
 import type { ApiSenderType } from '/@api/api-sender/api-sender-type.js';
@@ -35,9 +35,18 @@ describe('HostPresetRegistry', () => {
     registry = new HostPresetRegistry(apiSender, ipcHandle);
   });
 
-  test('init register handler', () => {
+  test('init registers a handler that returns host presets', async () => {
+    const preset: HostPreset = { id: 'registries', name: 'Registries', hosts: [{ hostname: 'registry.npmjs.org' }] };
+
     registry.init();
+    registry.registerHostPreset(preset);
     expect(ipcHandle).toHaveBeenCalledWith('host-preset-registry:getHostPresets', expect.any(Function));
+
+    const handlerCall = vi
+      .mocked(ipcHandle)
+      .mock.calls.find(([channel]) => channel === 'host-preset-registry:getHostPresets');
+    assert(handlerCall);
+    await expect(Reflect.apply(handlerCall[1], undefined, [])).resolves.toStrictEqual([preset]);
   });
 
   test('registers and returns host presets', () => {
