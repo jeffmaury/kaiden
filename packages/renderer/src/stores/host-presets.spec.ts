@@ -48,8 +48,6 @@ beforeEach(async () => {
   });
 
   vi.resetModules();
-  const jeff = await import('./host-presets');
-  console.log(jeff);
   hostPresetsModule = await import('./host-presets');
   hostPresetsModule.hostPresets.set([]);
 });
