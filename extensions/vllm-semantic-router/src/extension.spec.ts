@@ -27,7 +27,6 @@ vi.mock(import('./vllm-semantic-router-extension'));
 let extensionContextMock: ExtensionContext;
 
 beforeEach(() => {
-  vi.restoreAllMocks();
   vi.resetAllMocks();
   extensionContextMock = {} as ExtensionContext;
 });
