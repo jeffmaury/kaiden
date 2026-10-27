@@ -36,7 +36,12 @@ export class HostPresetRegistry {
   @postConstruct()
   init(): void {
     this.ipcHandle('host-preset-registry:getHostPresets', async (): Promise<ReadonlyArray<HostPreset>> => {
-      return this.getHostPresets();
+      return this.getHostPresets().map(({ id, name, description, hosts }) => ({
+        id,
+        name,
+        ...(description === undefined ? {} : { description }),
+        hosts: hosts.map(({ hostname }) => ({ hostname })),
+      }));
     });
   }
 
