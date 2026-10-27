@@ -17,6 +17,7 @@
  ***********************************************************************/
 
 import { writeFile } from 'node:fs/promises';
+import path from 'node:path';
 
 import type { OpenAICompatibleProvider } from '@ai-sdk/openai-compatible';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
@@ -84,8 +85,9 @@ const containerExtensionAPIMock: ContainerExtensionAPI = {
   getEndpoints: vi.fn().mockReturnValue([{ path: '/var/run/docker.sock', dockerode: dockerodeMock }]),
 } as unknown as ContainerExtensionAPI;
 
+const STORAGE_PATH = path.join(path.sep, 'tmp', 'test-storage');
 const extensionContextMock: ExtensionContext = {
-  storagePath: '/tmp/test-storage',
+  storagePath: STORAGE_PATH,
 } as unknown as ExtensionContext;
 
 const defaultConfig = {
@@ -170,7 +172,7 @@ describe('SemanticRouterContainerManager', () => {
     expect(routerCall.Labels[LABEL_NAME]).toBe('my-router');
     expect(routerCall.Labels[LABEL_ROLE]).toBe('router');
     expect(routerCall.HostConfig.PortBindings['50051/tcp']).toBeDefined();
-    expect(routerCall.HostConfig.Mounts[0].Source).toBe('/tmp/test-storage/configs/my-router/config.yaml');
+    expect(routerCall.HostConfig.Mounts[0].Source).toBe(path.join(STORAGE_PATH, 'configs', 'my-router', 'config.yaml'));
     expect(routerCall.HostConfig.Mounts[0].Target).toBe('/app/config.yaml');
 
     const envoyCall = dockerodeMock.createContainer.mock.calls[1]![0];
@@ -180,7 +182,7 @@ describe('SemanticRouterContainerManager', () => {
     expect(envoyCall.Labels[LABEL_NAME]).toBe('my-router');
     expect(envoyCall.Labels[LABEL_ROLE]).toBe('envoy');
     expect(envoyCall.HostConfig.PortBindings['8801/tcp']).toBeDefined();
-    expect(envoyCall.HostConfig.Mounts[0].Source).toBe('/tmp/test-storage/configs/my-router/envoy.yaml');
+    expect(envoyCall.HostConfig.Mounts[0].Source).toBe(path.join(STORAGE_PATH, 'configs', 'my-router', 'envoy.yaml'));
     expect(envoyCall.HostConfig.Mounts[0].Target).toBe('/etc/envoy/envoy.yaml');
 
     expect(routerStartMock).not.toHaveBeenCalled();
@@ -198,7 +200,9 @@ describe('SemanticRouterContainerManager', () => {
 
     await manager.create({ name: 'my-router', config: stringify(defaultConfig) });
 
-    const envoyConfigCall = vi.mocked(writeFile).mock.calls.find(c => (c[0] as string).endsWith('/envoy.yaml'));
+    const envoyConfigCall = vi
+      .mocked(writeFile)
+      .mock.calls.find(c => (c[0] as string).endsWith(path.join(path.sep, 'envoy.yaml')));
     expect(envoyConfigCall).toBeDefined();
 
     const envoyConfig = parse(envoyConfigCall![1] as string) as Record<string, unknown>;
@@ -262,7 +266,9 @@ describe('SemanticRouterContainerManager', () => {
 
     await manager.create({ name: 'my-router', config: stringify(multiBackendConfig) });
 
-    const envoyConfigCall = vi.mocked(writeFile).mock.calls.find(c => (c[0] as string).endsWith('/envoy.yaml'));
+    const envoyConfigCall = vi
+      .mocked(writeFile)
+      .mock.calls.find(c => (c[0] as string).endsWith(path.join(path.sep, 'envoy.yaml')));
     const envoyConfig = parse(envoyConfigCall![1] as string) as Record<string, unknown>;
     const clusters = (envoyConfig.static_resources as Record<string, unknown>).clusters as Array<
       Record<string, unknown>
@@ -293,7 +299,9 @@ describe('SemanticRouterContainerManager', () => {
 
     await manager.create({ name: 'my-router', config: stringify(noPortConfig) });
 
-    const envoyConfigCall = vi.mocked(writeFile).mock.calls.find(c => (c[0] as string).endsWith('/envoy.yaml'));
+    const envoyConfigCall = vi
+      .mocked(writeFile)
+      .mock.calls.find(c => (c[0] as string).endsWith(path.join(path.sep, 'envoy.yaml')));
     const envoyConfig = parse(envoyConfigCall![1] as string) as Record<string, unknown>;
     const clusters = (envoyConfig.static_resources as Record<string, unknown>).clusters as Array<
       Record<string, unknown>
@@ -330,7 +338,9 @@ describe('SemanticRouterContainerManager', () => {
 
     await manager.create({ name: 'my-router', config: stringify(badPortConfig) });
 
-    const envoyConfigCall = vi.mocked(writeFile).mock.calls.find(c => (c[0] as string).endsWith('/envoy.yaml'));
+    const envoyConfigCall = vi
+      .mocked(writeFile)
+      .mock.calls.find(c => (c[0] as string).endsWith(path.join(path.sep, 'envoy.yaml')));
     const envoyConfig = parse(envoyConfigCall![1] as string) as Record<string, unknown>;
     const clusters = (envoyConfig.static_resources as Record<string, unknown>).clusters as Array<
       Record<string, unknown>
@@ -345,7 +355,9 @@ describe('SemanticRouterContainerManager', () => {
 
     await manager.create({ name: 'my-router', config: stringify(defaultConfig) });
 
-    const envoyConfigCall = vi.mocked(writeFile).mock.calls.find(c => (c[0] as string).endsWith('/envoy.yaml'));
+    const envoyConfigCall = vi
+      .mocked(writeFile)
+      .mock.calls.find(c => (c[0] as string).endsWith(path.join(path.sep, 'envoy.yaml')));
     const roundtripped = parse(envoyConfigCall![1] as string) as unknown;
     expect(() => EnvoyConfigSchema.parse(roundtripped)).not.toThrow();
   });
