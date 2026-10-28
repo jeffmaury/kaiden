@@ -49,6 +49,53 @@ describe('HostPresetRegistry', () => {
     await expect(Reflect.apply(handlerCall[1], undefined, [])).resolves.toStrictEqual([preset]);
   });
 
+  test('handler strips extra properties and functions from presets and hosts', async () => {
+    const preset = {
+      id: 'registries',
+      name: 'Registries',
+      description: 'Package registries',
+      extra: 'not cloneable',
+      toString: (): string => 'preset',
+      hosts: [{ hostname: 'registry.npmjs.org', port: 443, resolve: (): void => {} }],
+    };
+
+    registry.init();
+    registry.registerHostPreset(preset);
+
+    const handlerCall = vi
+      .mocked(ipcHandle)
+      .mock.calls.find(([channel]) => channel === 'host-preset-registry:getHostPresets');
+    assert(handlerCall);
+    await expect(Reflect.apply(handlerCall[1], undefined, [])).resolves.toStrictEqual([
+      {
+        id: 'registries',
+        name: 'Registries',
+        description: 'Package registries',
+        hosts: [{ hostname: 'registry.npmjs.org' }],
+      },
+    ]);
+  });
+
+  test('handler omits description key when description is undefined', async () => {
+    const preset: HostPreset = {
+      id: 'registries',
+      name: 'Registries',
+      description: undefined,
+      hosts: [{ hostname: 'registry.npmjs.org' }],
+    };
+
+    registry.init();
+    registry.registerHostPreset(preset);
+
+    const handlerCall = vi
+      .mocked(ipcHandle)
+      .mock.calls.find(([channel]) => channel === 'host-preset-registry:getHostPresets');
+    assert(handlerCall);
+    const result: unknown = await Reflect.apply(handlerCall[1], undefined, []);
+    assert(Array.isArray(result));
+    expect(result[0]).not.toHaveProperty('description');
+  });
+
   test('registers and returns host presets', () => {
     const preset: HostPreset = { id: 'registries', name: 'Registries', hosts: [{ hostname: 'registry.npmjs.org' }] };
     registry.registerHostPreset(preset);
