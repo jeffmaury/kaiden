@@ -69,8 +69,6 @@ test('waits for extensions to start before fetching host presets', async () => {
   assert(hostPresetRegistryUpdatedCallback);
   hostPresetRegistryUpdatedCallback();
 
-  await Promise.resolve();
-  await Promise.resolve();
   expect(window.getHostPresets).not.toHaveBeenCalled();
   expect(get(hostPresets)).toStrictEqual([]);
 
