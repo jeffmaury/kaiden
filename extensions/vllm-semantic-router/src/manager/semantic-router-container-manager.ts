@@ -752,15 +752,6 @@ export class SemanticRouterContainerManager {
         },
       };
     }
-    if (model.name.startsWith('gemini')) {
-      route.regex_rewrite = {
-        pattern: {
-          google_re2: {},
-          regex: '^/v1(.*)$',
-        },
-        substitution: '/v1beta/openai\\1',
-      };
-    }
 
     return modelInfo;
   }
