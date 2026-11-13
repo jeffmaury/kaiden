@@ -39,7 +39,7 @@ import { inject, injectable } from 'inversify';
 
 import { ContainerExtensionAPISymbol, DoclingProviderSymbol, ExtensionContextSymbol } from '/@/inject/symbol';
 
-const DOCLING_IMAGE = `quay.io/docling-project/docling-serve:v1.9.0`;
+const DOCLING_IMAGE = `quay.io/docling-project/docling-serve:v1.38.2`;
 const DOCLING_PORT = 5001;
 const DOCLING_NAME_LABEL = 'ai.openkaiden.docling.name';
 const DOCLING_PORT_LABEL = 'ai.openkaiden.docling.port';
