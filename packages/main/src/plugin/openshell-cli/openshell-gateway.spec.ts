@@ -2686,7 +2686,7 @@ describe('gateway config generation', () => {
     );
     expect(writeFile).toHaveBeenCalledWith(
       GATEWAY_CONFIG_PATH,
-      expect.stringContaining('supervisor_image = "ghcr.io/nvidia/openshell/supervisor:0.0.69"'),
+      expect.stringContaining('supervisor_image = "ghcr.io/nvidia/openshell/supervisor:0.1.8"'),
       'utf-8',
     );
   });
