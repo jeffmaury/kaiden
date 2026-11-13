@@ -45,6 +45,7 @@ vi.mock(import('/@/helper/network-helper'));
 const connectionDisposable = { dispose: vi.fn() };
 const factoryDisposable = { dispose: vi.fn() };
 const endpointsSubscription = { dispose: vi.fn() };
+const containersSubscription = { dispose: vi.fn() };
 
 const routerStartMock = vi.fn();
 const routerStopMock = vi.fn();
@@ -88,6 +89,7 @@ const providerMock: Provider = {
 const containerExtensionAPIMock: ContainerExtensionAPI = {
   getEndpoints: vi.fn().mockReturnValue([{ path: '/var/run/docker.sock', dockerode: dockerodeMock }]),
   onEndpointsChanged: vi.fn(),
+  onContainersChanged: vi.fn(),
 } as unknown as ContainerExtensionAPI;
 
 const STORAGE_PATH = path.join(path.sep, 'tmp', 'test-storage');
@@ -130,6 +132,7 @@ describe('SemanticRouterContainerManager', () => {
       { path: '/var/run/docker.sock', dockerode: dockerodeMock } as never,
     ]);
     vi.mocked(containerExtensionAPIMock.onEndpointsChanged).mockReturnValue(endpointsSubscription);
+    vi.mocked(containerExtensionAPIMock.onContainersChanged).mockReturnValue(containersSubscription);
     dockerodeMock.pull.mockResolvedValue('stream');
     followProgressMock.mockImplementation((_stream: unknown, onFinish: (err: Error | null) => void) => {
       onFinish(null);
@@ -1118,6 +1121,109 @@ describe('SemanticRouterContainerManager', () => {
     expect(registeredConnection.status()).toBe('stopped');
   });
 
+  describe('container changes', () => {
+    const containerInfo = (id: string, state: string): unknown => ({ Id: id, State: state, Labels: {} });
+
+    async function createConnection(): Promise<{
+      connection: Parameters<typeof providerMock.registerInferenceProviderConnection>[0];
+      onContainersChanged: () => unknown;
+    }> {
+      await manager.init();
+      vi.mocked(createOpenAICompatible).mockReturnValueOnce({} as unknown as OpenAICompatibleProvider);
+      await manager.create({ name: 'my-router', config: stringify(defaultConfig) });
+      const connection = vi.mocked(providerMock.registerInferenceProviderConnection).mock.calls[0]?.[0];
+      const onContainersChanged = vi.mocked(containerExtensionAPIMock.onContainersChanged).mock.calls[0]?.[0];
+      assert(connection);
+      assert(onContainersChanged);
+      // the listener returns the refresh promise
+      return { connection, onContainersChanged: (): unknown => onContainersChanged() };
+    }
+
+    test.each([
+      { router: 'running', envoy: 'running', status: 'started' },
+      { router: 'running', envoy: 'exited', status: 'stopped' },
+      { router: 'exited', envoy: 'running', status: 'stopped' },
+      { router: 'exited', envoy: 'exited', status: 'stopped' },
+    ])('reports $status when the router is $router and envoy is $envoy', async ({ router, envoy, status }) => {
+      const { connection, onContainersChanged } = await createConnection();
+      dockerodeMock.listContainers.mockResolvedValue([
+        containerInfo('router-container-id', router),
+        containerInfo('envoy-container-id', envoy),
+      ]);
+
+      onContainersChanged();
+
+      await vi.waitFor(() => expect(connection.status()).toBe(status));
+      expect(connectionDisposable.dispose).not.toHaveBeenCalled();
+    });
+
+    test('marks a started connection stopped when envoy is stopped outside of the extension', async () => {
+      const { connection, onContainersChanged } = await createConnection();
+      assert(connection.lifecycle?.start);
+      await connection.lifecycle.start({} as never, {} as never);
+      expect(connection.status()).toBe('started');
+      dockerodeMock.listContainers.mockResolvedValue([
+        containerInfo('router-container-id', 'running'),
+        containerInfo('envoy-container-id', 'exited'),
+      ]);
+
+      onContainersChanged();
+
+      await vi.waitFor(() => expect(connection.status()).toBe('stopped'));
+    });
+
+    test.each([
+      'router-container-id',
+      'envoy-container-id',
+    ])('unregisters the connection when container %s is removed', async remainingId => {
+      const { onContainersChanged } = await createConnection();
+      dockerodeMock.listContainers.mockResolvedValue([containerInfo(remainingId, 'running')]);
+
+      onContainersChanged();
+
+      await vi.waitFor(() => expect(connectionDisposable.dispose).toHaveBeenCalledOnce());
+      // no longer tracked: dispose() does not dispose it again
+      manager.dispose();
+      expect(connectionDisposable.dispose).toHaveBeenCalledOnce();
+    });
+
+    test('keeps the connection when listing containers fails', async () => {
+      const { connection, onContainersChanged } = await createConnection();
+      dockerodeMock.listContainers.mockRejectedValue(new Error('engine unavailable'));
+
+      onContainersChanged();
+
+      await vi.waitFor(() => expect(dockerodeMock.listContainers).toHaveBeenCalledTimes(2));
+      expect(connectionDisposable.dispose).not.toHaveBeenCalled();
+      expect(connection.status()).toBe('stopped');
+    });
+
+    test('does not drop a connection registered while a refresh is listing containers', async () => {
+      const { promise: listing, resolve: finishListing } = Promise.withResolvers<unknown[]>();
+      const { connection, onContainersChanged } = await createConnection();
+      dockerodeMock.listContainers.mockReturnValueOnce(listing);
+
+      const refreshing = onContainersChanged();
+      // the router is deleted and recreated with the same name while the refresh waits for the engine
+      assert(connection.lifecycle?.delete);
+      await connection.lifecycle.delete();
+      dockerodeMock.createContainer
+        .mockResolvedValueOnce(routerContainerMock)
+        .mockResolvedValueOnce(envoyContainerMock);
+      vi.mocked(createOpenAICompatible).mockReturnValueOnce({} as unknown as OpenAICompatibleProvider);
+      const recreatedDisposable = { dispose: vi.fn() };
+      vi.mocked(providerMock.registerInferenceProviderConnection).mockReturnValueOnce(recreatedDisposable);
+      await manager.create({ name: 'my-router', config: stringify(defaultConfig) });
+      finishListing([]);
+      await refreshing;
+
+      expect(recreatedDisposable.dispose).not.toHaveBeenCalled();
+      // still tracked: dispose() disposes it
+      manager.dispose();
+      expect(recreatedDisposable.dispose).toHaveBeenCalledOnce();
+    });
+  });
+
   describe('lifecycle.start failures', () => {
     async function createStoppedConnection(): Promise<
       Parameters<typeof providerMock.registerInferenceProviderConnection>[0]
@@ -1287,5 +1393,6 @@ describe('SemanticRouterContainerManager', () => {
     expect(factoryDisposable.dispose).toHaveBeenCalled();
     expect(connectionDisposable.dispose).toHaveBeenCalled();
     expect(endpointsSubscription.dispose).toHaveBeenCalled();
+    expect(containersSubscription.dispose).toHaveBeenCalled();
   });
 });

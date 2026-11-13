@@ -85,8 +85,15 @@ export class SemanticRouterContainerManager {
   #connections: Map<string, ManagedConnection> = new Map();
   #factoryDisposable: Disposable | undefined;
   #endpointsSubscription: Disposable | undefined;
+  #containersSubscription: Disposable | undefined;
 
   async init(): Promise<void> {
+    // containers can be stopped, started or removed outside of this extension (or crash)
+    this.#containersSubscription = this.containerExtensionAPI.onContainersChanged(() =>
+      this.refreshConnections().catch((err: unknown) =>
+        console.error('vllm-semantic-router: failed to refresh semantic router connections', err),
+      ),
+    );
     this.#endpointsSubscription = this.containerExtensionAPI.onEndpointsChanged(endpoints =>
       this.updateFactoryRegistration(endpoints).catch((err: unknown) =>
         console.error('vllm-semantic-router: failed to update semantic router factory registration', err),
@@ -196,6 +203,40 @@ export class SemanticRouterContainerManager {
     } else if (this.#factoryDisposable) {
       this.#factoryDisposable.dispose();
       this.#factoryDisposable = undefined;
+    }
+  }
+
+  // update the running state of the known connections and drop the ones whose containers are gone
+  private async refreshConnections(): Promise<void> {
+    // only connections known before listing: a router registered meanwhile must not be dropped
+    const byEndpoint = new Map<string, [string, ManagedConnection][]>();
+    for (const entry of this.#connections) {
+      const entries = byEndpoint.get(entry[1].endpointPath) ?? [];
+      entries.push(entry);
+      byEndpoint.set(entry[1].endpointPath, entries);
+    }
+
+    for (const [endpointPath, entries] of byEndpoint) {
+      let containers: Dockerode.ContainerInfo[];
+      try {
+        containers = await entries[0][1].dockerode.listContainers({ all: true });
+      } catch (err: unknown) {
+        console.error(`vllm-semantic-router: failed to list containers of ${endpointPath}`, err);
+        continue;
+      }
+      for (const [connectionId, managed] of entries) {
+        const router = containers.find(c => c.Id === managed.routerContainerId);
+        const envoy = containers.find(c => c.Id === managed.envoyContainerId);
+        if (!router || !envoy) {
+          if (this.#connections.get(connectionId) === managed) {
+            console.warn(`vllm-semantic-router: containers of semantic router '${connectionId}' are gone`);
+            managed.disposable.dispose();
+            this.#connections.delete(connectionId);
+          }
+          continue;
+        }
+        managed.running = router.State === 'running' && envoy.State === 'running';
+      }
     }
   }
 
@@ -503,7 +544,8 @@ export class SemanticRouterContainerManager {
       },
     });
 
-    this.#connections.set(connectionId, { ...managed, disposable });
+    // keep the same object: status() and the lifecycle read and update it
+    this.#connections.set(connectionId, Object.assign(managed, { disposable }));
   }
 
   // 304 Not Modified: the container is already in the requested state
@@ -843,6 +885,8 @@ export class SemanticRouterContainerManager {
   }
 
   dispose(): void {
+    this.#containersSubscription?.dispose();
+    this.#containersSubscription = undefined;
     this.#endpointsSubscription?.dispose();
     this.#endpointsSubscription = undefined;
     this.#factoryDisposable?.dispose();
