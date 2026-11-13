@@ -384,7 +384,7 @@ describe('ConnectionManager', () => {
     expect(Dockerode.prototype.createContainer).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'milvus-my-milvus',
-        Image: 'docker.io/milvusdb/milvus:v2.6.3',
+        Image: 'docker.io/milvusdb/milvus:v2.6.27',
         Cmd: ['milvus', 'run', 'standalone'],
         Labels: expect.objectContaining({
           'ai.openkaiden.milvus.name': 'my-milvus',
@@ -476,7 +476,7 @@ describe('ConnectionManager', () => {
 
     await connectionManager.factory(params);
 
-    expect(Dockerode.prototype.pull).toHaveBeenCalledWith('docker.io/milvusdb/milvus:v2.6.3');
+    expect(Dockerode.prototype.pull).toHaveBeenCalledWith('docker.io/milvusdb/milvus:v2.6.27');
   });
 
   test('factory should use logger when provided', async () => {
