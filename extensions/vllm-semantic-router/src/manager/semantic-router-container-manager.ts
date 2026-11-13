@@ -55,7 +55,7 @@ type ModelInfo = { cluster: EnvoyCluster; route: EnvoyRoute };
 @injectable()
 export class SemanticRouterContainerManager {
   private static readonly VLLM_SR_IMAGE = 'ghcr.io/vllm-project/semantic-router/vllm-sr:v0.3.0';
-  private static readonly ENVOY_IMAGE = 'envoyproxy/envoy:v1.34.14';
+  private static readonly ENVOY_IMAGE = 'docker.io/envoyproxy/envoy:v1.40.2';
   private static readonly ROUTER_GRPC_PORT = 50051;
   private static readonly ENVOY_LISTEN_PORT = 8801;
   private static readonly CONFIGS_FOLDER = 'configs';

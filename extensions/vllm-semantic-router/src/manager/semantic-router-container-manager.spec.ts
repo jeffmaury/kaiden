@@ -399,7 +399,7 @@ describe('SemanticRouterContainerManager', () => {
     await manager.create({ name: 'my-router', config: stringify(defaultConfig) });
 
     expect(dockerodeMock.pull).toHaveBeenCalledWith('ghcr.io/vllm-project/semantic-router/vllm-sr:v0.3.0');
-    expect(dockerodeMock.pull).toHaveBeenCalledWith('envoyproxy/envoy:v1.34.14');
+    expect(dockerodeMock.pull).toHaveBeenCalledWith('docker.io/envoyproxy/envoy:v1.40.2');
     expect(dockerodeMock.createContainer).toHaveBeenCalledTimes(2);
 
     const routerCall = dockerodeMock.createContainer.mock.calls[0];
@@ -416,7 +416,7 @@ describe('SemanticRouterContainerManager', () => {
 
     const envoyCall = dockerodeMock.createContainer.mock.calls[1];
     assert(envoyCall);
-    expect(envoyCall[0].Image).toBe('envoyproxy/envoy:v1.34.14');
+    expect(envoyCall[0].Image).toBe('docker.io/envoyproxy/envoy:v1.40.2');
     expect(envoyCall[0].User).toBe('101');
     expect(envoyCall[0].Cmd).toEqual(['envoy', '-c', '/etc/envoy/envoy.yaml', '-l', 'debug']);
     expect(envoyCall[0].Labels[SemanticRouterLabel.NAME]).toBe('my-router');
@@ -852,7 +852,7 @@ describe('SemanticRouterContainerManager', () => {
       await manager.create({ name: 'my-router', config: stringify(defaultConfig) }, loggerMock);
 
       expect(dockerodeMock.getImage).toHaveBeenCalledWith('ghcr.io/vllm-project/semantic-router/vllm-sr:v0.3.0');
-      expect(dockerodeMock.getImage).toHaveBeenCalledWith(expect.stringMatching(/^envoyproxy\/envoy:/));
+      expect(dockerodeMock.getImage).toHaveBeenCalledWith('docker.io/envoyproxy/envoy:v1.40.2');
       expect(dockerodeMock.pull).not.toHaveBeenCalled();
       expect(loggerMock.log).toHaveBeenCalledWith(
         'Image ghcr.io/vllm-project/semantic-router/vllm-sr:v0.3.0 is already available',
@@ -867,7 +867,7 @@ describe('SemanticRouterContainerManager', () => {
       await manager.create({ name: 'my-router', config: stringify(defaultConfig) });
 
       expect(dockerodeMock.pull).toHaveBeenCalledOnce();
-      expect(dockerodeMock.pull).toHaveBeenCalledWith(expect.stringMatching(/^envoyproxy\/envoy:/));
+      expect(dockerodeMock.pull).toHaveBeenCalledWith('docker.io/envoyproxy/envoy:v1.40.2');
     });
 
     test('create still pulls the image when inspecting it fails for another reason', async () => {
