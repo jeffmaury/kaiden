@@ -39,7 +39,7 @@ runs:
   using: composite
   steps:
     - name: Setup Ollama
-      uses: ai-action/setup-ollama@71ea83e32be8721c648fa946c5da9853679a3803 # v2
+      uses: ai-action/setup-ollama@4d24ba3341d7b8e6ed2f80aa4ee53be6ee8e29fc # v2
 
     - name: Cache Ollama models
       uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5
