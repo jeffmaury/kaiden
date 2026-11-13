@@ -259,12 +259,16 @@ describe('SemanticRouterContainerManager', () => {
 
       expect(dockerodeMock.listContainers).toHaveBeenCalledWith({ all: true });
       expect(providerMock.registerInferenceProviderConnection).toHaveBeenCalledOnce();
-      const registeredConnection = vi.mocked(providerMock.registerInferenceProviderConnection).mock.calls[0]?.[0];
-      assert(registeredConnection);
-      expect(registeredConnection.id).toBe('existing');
-      expect(registeredConnection.name).toBe('existing');
-      expect(registeredConnection.endpoint).toBe('http://localhost:8888/v1');
-      expect(registeredConnection.status()).toBe(status);
+      expect(providerMock.registerInferenceProviderConnection).toHaveBeenNthCalledWith(
+        1,
+        expect.toSatisfy(registeredConnection => {
+          expect(registeredConnection.id).toBe('existing');
+          expect(registeredConnection.name).toBe('existing');
+          expect(registeredConnection.endpoint).toBe('http://localhost:8888/v1');
+          expect(registeredConnection.status()).toBe(status);
+          return true;
+        }),
+      );
     });
 
     test('init does not look for existing containers when no endpoint is available', async () => {
@@ -353,10 +357,10 @@ describe('SemanticRouterContainerManager', () => {
         listener([firstEndpoint, otherEndpoint]);
 
         await vi.waitFor(() => expect(providerMock.registerInferenceProviderConnection).toHaveBeenCalledOnce());
-        const registeredConnection = vi.mocked(providerMock.registerInferenceProviderConnection).mock.calls[0]?.[0];
-        assert(registeredConnection);
-        expect(registeredConnection.id).toBe('other');
-        expect(registeredConnection.endpoint).toBe('http://localhost:9999/v1');
+        expect(providerMock.registerInferenceProviderConnection).toHaveBeenNthCalledWith(
+          1,
+          expect.objectContaining({ id: 'other', endpoint: 'http://localhost:9999/v1' }),
+        );
       });
 
       test('keeps the connections of the remaining engine when another engine goes away', async () => {
@@ -486,41 +490,58 @@ describe('SemanticRouterContainerManager', () => {
     expect(dockerodeMock.pull).toHaveBeenCalledWith('docker.io/envoyproxy/envoy:v1.40.2');
     expect(dockerodeMock.createContainer).toHaveBeenCalledTimes(2);
 
-    const routerCall = dockerodeMock.createContainer.mock.calls[0];
-    assert(routerCall);
-    expect(routerCall[0].Image).toBe('ghcr.io/vllm-project/semantic-router/vllm-sr:v0.3.0');
-    expect(routerCall[0].Labels[SemanticRouterLabel.NAME]).toBe('my-router');
-    expect(routerCall[0].Labels[SemanticRouterLabel.ROLE]).toBe('router');
-    expect(routerCall[0].HostConfig.PortBindings['50051/tcp']).toBeUndefined();
-    expect(routerCall[0].ExposedPorts).toEqual({ '8801/tcp': {} });
-    expect(routerCall[0].HostConfig.Mounts[0].Source).toBe(
-      path.join(STORAGE_PATH, 'configs', 'my-router', 'config.yaml'),
+    expect(dockerodeMock.createContainer).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        Image: 'ghcr.io/vllm-project/semantic-router/vllm-sr:v0.3.0',
+        Labels: { [SemanticRouterLabel.NAME]: 'my-router', [SemanticRouterLabel.ROLE]: 'router' },
+        // only the envoy port: the router gRPC port is not published
+        ExposedPorts: { '8801/tcp': {} },
+        HostConfig: expect.objectContaining({
+          PortBindings: { '8801/tcp': [{ HostIp: '127.0.0.1', HostPort: '50001' }] },
+          Mounts: [
+            expect.objectContaining({
+              Source: path.join(STORAGE_PATH, 'configs', 'my-router', 'config.yaml'),
+              Target: '/app/config.yaml',
+            }),
+          ],
+        }),
+      }),
     );
-    expect(routerCall[0].HostConfig.Mounts[0].Target).toBe('/app/config.yaml');
 
-    const envoyCall = dockerodeMock.createContainer.mock.calls[1];
-    assert(envoyCall);
-    expect(envoyCall[0].Image).toBe('docker.io/envoyproxy/envoy:v1.40.2');
-    expect(envoyCall[0].User).toBe('101');
-    expect(envoyCall[0].Cmd).toEqual(['envoy', '-c', '/etc/envoy/envoy.yaml', '-l', 'debug']);
-    expect(envoyCall[0].Labels[SemanticRouterLabel.NAME]).toBe('my-router');
-    expect(envoyCall[0].Labels[SemanticRouterLabel.ROLE]).toBe('envoy');
-    expect(envoyCall[0].HostConfig.NetworkMode).toBe('container:router-container-id');
-    expect(envoyCall[0].HostConfig.PortBindings).toBeUndefined();
-    expect(envoyCall[0].ExposedPorts).toBeUndefined();
-    expect(envoyCall[0].HostConfig.Mounts[0].Source).toBe(
-      path.join(STORAGE_PATH, 'configs', 'my-router', 'envoy.yaml'),
+    expect(dockerodeMock.createContainer).toHaveBeenNthCalledWith(
+      2,
+      // exact match: envoy shares the router network and publishes no port
+      {
+        Image: 'docker.io/envoyproxy/envoy:v1.40.2',
+        User: '101',
+        Cmd: ['envoy', '-c', '/etc/envoy/envoy.yaml', '-l', 'debug'],
+        Labels: { [SemanticRouterLabel.NAME]: 'my-router', [SemanticRouterLabel.ROLE]: 'envoy' },
+        HostConfig: {
+          NetworkMode: 'container:router-container-id',
+          Mounts: [
+            expect.objectContaining({
+              Source: path.join(STORAGE_PATH, 'configs', 'my-router', 'envoy.yaml'),
+              Target: '/etc/envoy/envoy.yaml',
+            }),
+          ],
+        },
+      },
     );
-    expect(envoyCall[0].HostConfig.Mounts[0].Target).toBe('/etc/envoy/envoy.yaml');
 
     expect(routerStartMock).not.toHaveBeenCalled();
     expect(envoyStartMock).not.toHaveBeenCalled();
 
-    const registeredConnection = vi.mocked(providerMock.registerInferenceProviderConnection).mock.calls[0]![0];
-    expect(registeredConnection.name).toBe('my-router');
-    expect(registeredConnection.type).toBe('local');
-    expect(registeredConnection.status()).toBe('stopped');
-    expect(registeredConnection.endpoint).toMatch(/^http:\/\/localhost:\d+\/v1$/);
+    expect(providerMock.registerInferenceProviderConnection).toHaveBeenNthCalledWith(
+      1,
+      expect.toSatisfy(registeredConnection => {
+        expect(registeredConnection.name).toBe('my-router');
+        expect(registeredConnection.type).toBe('local');
+        expect(registeredConnection.status()).toBe('stopped');
+        expect(registeredConnection.endpoint).toMatch(/^http:\/\/localhost:\d+\/v1$/);
+        return true;
+      }),
+    );
   });
 
   test.each([
@@ -536,13 +557,16 @@ describe('SemanticRouterContainerManager', () => {
 
     await manager.create({ name: 'my-router', config: stringify(defaultConfig) });
 
-    const routerCall = dockerodeMock.createContainer.mock.calls[0];
-    assert(routerCall);
-    expect(routerCall[0].Env).toContain(`SR_LOG_LEVEL=${level}`);
-    expect(routerCall[0].Env).toContain(`OTEL_TRACES_EXPORTER=${tracesExporter}`);
-    const envoyCall = dockerodeMock.createContainer.mock.calls[1];
-    assert(envoyCall);
-    expect(envoyCall[0].Cmd).toEqual(['envoy', '-c', '/etc/envoy/envoy.yaml', '-l', level]);
+    expect(dockerodeMock.createContainer).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        Env: expect.arrayContaining([`SR_LOG_LEVEL=${level}`, `OTEL_TRACES_EXPORTER=${tracesExporter}`]),
+      }),
+    );
+    expect(dockerodeMock.createContainer).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ Cmd: ['envoy', '-c', '/etc/envoy/envoy.yaml', '-l', level] }),
+    );
   });
 
   test('create publishes only the envoy port, on loopback, from the router container', async () => {
@@ -553,15 +577,19 @@ describe('SemanticRouterContainerManager', () => {
     expect(net.getFreePort).toHaveBeenCalledOnce();
     expect(net.getFreePort).toHaveBeenCalledWith(0);
 
-    const routerCall = dockerodeMock.createContainer.mock.calls[0];
-    assert(routerCall);
-    expect(routerCall[0].HostConfig.PortBindings).toEqual({
-      '8801/tcp': [{ HostIp: '127.0.0.1', HostPort: '50001' }],
-    });
+    expect(dockerodeMock.createContainer).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        HostConfig: expect.objectContaining({
+          PortBindings: { '8801/tcp': [{ HostIp: '127.0.0.1', HostPort: '50001' }] },
+        }),
+      }),
+    );
 
-    const registeredConnection = vi.mocked(providerMock.registerInferenceProviderConnection).mock.calls[0]?.[0];
-    assert(registeredConnection);
-    expect(registeredConnection.endpoint).toBe('http://localhost:50001/v1');
+    expect(providerMock.registerInferenceProviderConnection).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ endpoint: 'http://localhost:50001/v1' }),
+    );
   });
 
   test('create fails without creating containers when no free port is available', async () => {
@@ -875,11 +903,10 @@ describe('SemanticRouterContainerManager', () => {
     expect(result).toEqual({ connectionId: 'my-router' });
     expect(mkdir).toHaveBeenCalledWith(path.join(STORAGE_PATH, 'configs'), { recursive: true });
     expect(mkdir).toHaveBeenCalledWith(path.join(STORAGE_PATH, 'configs', 'my-router'));
-    const routerCall = dockerodeMock.createContainer.mock.calls[0];
-    assert(routerCall);
-    const registeredConnection = vi.mocked(providerMock.registerInferenceProviderConnection).mock.calls[0]?.[0];
-    assert(registeredConnection);
-    expect(registeredConnection.id).toBe('my-router');
+    expect(providerMock.registerInferenceProviderConnection).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ id: 'my-router' }),
+    );
   });
 
   test('create rejects when the config folder already exists', async () => {
