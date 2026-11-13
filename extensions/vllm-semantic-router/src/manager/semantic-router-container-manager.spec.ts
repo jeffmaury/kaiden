@@ -29,7 +29,7 @@ import { Container } from 'inversify';
 import { assert, beforeEach, describe, expect, test, vi } from 'vitest';
 import { parse, stringify } from 'yaml';
 
-import { EnvoyConfigSchema } from '/@/api/envoy-config-schema';
+import { type EnvoyConfig, EnvoyConfigSchema } from '/@/api/envoy-config-schema';
 import { SemanticRouterLabel } from '/@/api/semantic-router-container-info';
 import { SRConfigSchema } from '/@/api/sr-config-schema';
 import { ContainerFinder } from '/@/helper/container-finder';
@@ -96,6 +96,24 @@ const STORAGE_PATH = path.join(path.sep, 'tmp', 'test-storage');
 const extensionContextMock: ExtensionContext = {
   storagePath: STORAGE_PATH,
 } as unknown as ExtensionContext;
+
+const ENVOY_CONFIG_PATH = path.join(STORAGE_PATH, 'configs', 'my-router', 'envoy.yaml');
+
+// matches the written envoy.yaml content once parsed and validated with the envoy config schema
+function envoyConfigMatching(check: (envoyConfig: EnvoyConfig) => void): boolean {
+  return expect.toSatisfy((content: string) => {
+    check(EnvoyConfigSchema.parse(parse(content)));
+    return true;
+  });
+}
+
+function socketAddressOf(
+  envoyConfig: EnvoyConfig,
+  clusterName: string,
+): { address: string; port_value: number } | undefined {
+  return envoyConfig.static_resources.clusters.find(c => c.name === clusterName)?.load_assignment.endpoints[0]
+    ?.lb_endpoints[0]?.endpoint.address.socket_address;
+}
 
 const defaultConfig = {
   version: 'v0.3',
@@ -606,42 +624,18 @@ describe('SemanticRouterContainerManager', () => {
 
     await manager.create({ name: 'my-router', config: stringify(defaultConfig) });
 
-    const envoyConfigCall = vi
-      .mocked(writeFile)
-      .mock.calls.find(c => (c[0] as string).endsWith(path.join(path.sep, 'envoy.yaml')));
-    assert(envoyConfigCall);
-
-    const envoyConfig = parse(envoyConfigCall[1] as string) as Record<string, unknown>;
-    const clusters = (envoyConfig.static_resources as Record<string, unknown>).clusters as Array<
-      Record<string, unknown>
-    >;
-
-    const extprocCluster = clusters.find(c => c.name === 'extproc_service');
-    assert(extprocCluster);
-
-    expect(extprocCluster.type).toBe('STATIC');
-
-    const endpoints = (extprocCluster!.load_assignment as Record<string, unknown>).endpoints as Array<
-      Record<string, unknown>
-    >;
-    assert(endpoints[0]);
-    const lbEndpoints = endpoints[0].lb_endpoints as Array<Record<string, unknown>>;
-    const socketAddress = ((lbEndpoints[0]!.endpoint as Record<string, unknown>).address as Record<string, unknown>)
-      .socket_address as Record<string, unknown>;
-    expect(socketAddress.address).toBe('127.0.0.1');
-    expect(socketAddress.port_value).toBe(50051);
-
-    const backendCluster = clusters.find(c => c.name === 'gpt-4');
-    assert(backendCluster);
-    const backendEndpoints = (backendCluster.load_assignment as Record<string, unknown>).endpoints as Array<
-      Record<string, unknown>
-    >;
-    const backendLbEndpoints = backendEndpoints[0].lb_endpoints as Array<Record<string, unknown>>;
-    const backendAddr = ((backendLbEndpoints[0].endpoint as Record<string, unknown>).address as Record<string, unknown>)
-      .socket_address as Record<string, unknown>;
-    expect(backendAddr.address).toBe('converted-host');
+    expect(writeFile).toHaveBeenCalledWith(
+      ENVOY_CONFIG_PATH,
+      envoyConfigMatching(envoyConfig => {
+        const extprocCluster = envoyConfig.static_resources.clusters.find(c => c.name === 'extproc_service');
+        expect(extprocCluster?.type).toBe('STATIC');
+        // envoy shares the router network namespace
+        expect(socketAddressOf(envoyConfig, 'extproc_service')).toEqual({ address: '127.0.0.1', port_value: 50051 });
+        expect(socketAddressOf(envoyConfig, 'gpt-4')).toEqual({ address: 'converted-host', port_value: 8000 });
+      }),
+      'utf-8',
+    );
     expect(NetworkHelper.prototype.convertHost).toHaveBeenCalledWith('localhost');
-    expect(backendAddr.port_value).toBe(8000);
   });
 
   test('create generates envoy config with one cluster per model', async () => {
@@ -672,20 +666,18 @@ describe('SemanticRouterContainerManager', () => {
 
     await manager.create({ name: 'my-router', config: stringify(multiBackendConfig) });
 
-    const envoyConfigCall = vi
-      .mocked(writeFile)
-      .mock.calls.find(c => (c[0] as string).endsWith(path.join(path.sep, 'envoy.yaml')));
-    assert(envoyConfigCall);
-    const envoyConfig = parse(envoyConfigCall[1] as string) as Record<string, unknown>;
-    const clusters = (envoyConfig.static_resources as Record<string, unknown>).clusters as Array<
-      Record<string, unknown>
-    >;
-
-    const modelClusters = clusters.filter(c => c.name !== 'extproc_service');
-    expect(modelClusters).toHaveLength(3);
-    assert(modelClusters.find(c => c.name === 'model-a'));
-    assert(modelClusters.find(c => c.name === 'model-b'));
-    assert(modelClusters.find(c => c.name === 'model-c'));
+    expect(writeFile).toHaveBeenCalledWith(
+      ENVOY_CONFIG_PATH,
+      envoyConfigMatching(envoyConfig => {
+        expect(envoyConfig.static_resources.clusters.map(c => c.name)).toEqual([
+          'extproc_service',
+          'model-a',
+          'model-b',
+          'model-c',
+        ]);
+      }),
+      'utf-8',
+    );
   });
 
   test('create rejects duplicate model names without side effects', async () => {
@@ -732,27 +724,14 @@ describe('SemanticRouterContainerManager', () => {
 
     await manager.create({ name: 'my-router', config: stringify(noPortConfig) });
 
-    const envoyConfigCall = vi
-      .mocked(writeFile)
-      .mock.calls.find(c => (c[0] as string).endsWith(path.join(path.sep, 'envoy.yaml')));
-    assert(envoyConfigCall);
-    const envoyConfig = parse(envoyConfigCall[1] as string) as Record<string, unknown>;
-    const clusters = (envoyConfig.static_resources as Record<string, unknown>).clusters as Array<
-      Record<string, unknown>
-    >;
-
-    const backendCluster = clusters.find(c => c.name === 'model-a');
-    assert(backendCluster);
-    const addr = (
-      (
-        ((backendCluster.load_assignment as Record<string, unknown>).endpoints as Array<Record<string, unknown>>)[0]!
-          .lb_endpoints as Array<Record<string, unknown>>
-      )[0].endpoint as Record<string, unknown>
-    ).address as Record<string, unknown>;
-    const socketAddress = addr.socket_address as Record<string, unknown>;
-    expect(socketAddress.address).toBe('converted-host');
+    expect(writeFile).toHaveBeenCalledWith(
+      ENVOY_CONFIG_PATH,
+      envoyConfigMatching(envoyConfig => {
+        expect(socketAddressOf(envoyConfig, 'model-a')).toEqual({ address: 'converted-host', port_value: 80 });
+      }),
+      'utf-8',
+    );
     expect(NetworkHelper.prototype.convertHost).toHaveBeenCalledWith('my-backend');
-    expect(socketAddress.port_value).toBe(80);
   });
 
   function configWithEndpoint(endpoint: string, protocol = 'http'): string {
@@ -782,15 +761,12 @@ describe('SemanticRouterContainerManager', () => {
     await manager.create({ name: 'my-router', config: configWithEndpoint(endpoint, protocol) });
 
     expect(NetworkHelper.prototype.convertHost).toHaveBeenCalledWith(hostname);
-    const envoyConfigCall = vi
-      .mocked(writeFile)
-      .mock.calls.find(c => (c[0] as string).endsWith(path.join(path.sep, 'envoy.yaml')));
-    assert(envoyConfigCall);
-    const envoyConfig = EnvoyConfigSchema.parse(parse(envoyConfigCall[1] as string));
-    const cluster = envoyConfig.static_resources.clusters.find(c => c.name === 'model-a');
-    assert(cluster);
-    expect(cluster.load_assignment.endpoints[0]?.lb_endpoints[0]?.endpoint.address.socket_address.port_value).toBe(
-      port,
+    expect(writeFile).toHaveBeenCalledWith(
+      ENVOY_CONFIG_PATH,
+      envoyConfigMatching(envoyConfig => {
+        expect(socketAddressOf(envoyConfig, 'model-a')?.port_value).toBe(port);
+      }),
+      'utf-8',
     );
   });
 
@@ -837,12 +813,12 @@ describe('SemanticRouterContainerManager', () => {
 
     await manager.create({ name: 'my-router', config: stringify(defaultConfig) });
 
-    const envoyConfigCall = vi
-      .mocked(writeFile)
-      .mock.calls.find(c => (c[0] as string).endsWith(path.join(path.sep, 'envoy.yaml')));
-    assert(envoyConfigCall);
-    const roundtripped = parse(envoyConfigCall[1] as string) as unknown;
-    expect(() => EnvoyConfigSchema.parse(roundtripped)).not.toThrow();
+    // envoyConfigMatching fails if the written content does not pass the schema
+    expect(writeFile).toHaveBeenCalledWith(
+      ENVOY_CONFIG_PATH,
+      envoyConfigMatching(() => {}),
+      'utf-8',
+    );
   });
 
   test('SR config passes schema validation', () => {
