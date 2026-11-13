@@ -202,7 +202,7 @@ describe('ConnectionManager', () => {
             'ai.openkaiden.docling.name': 'my-chunker',
             'ai.openkaiden.docling.port': expect.any(String),
           },
-          Image: 'quay.io/docling-project/docling-serve:v1.9.0',
+          Image: 'quay.io/docling-project/docling-serve:v1.38.2',
           Env: ['UVICORN_WORKERS=1'],
         }),
       );
