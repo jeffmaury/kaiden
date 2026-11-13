@@ -597,7 +597,7 @@ describe('SemanticRouterContainerManager', () => {
     };
 
     await expect(manager.create({ name: 'my-router', config: stringify(duplicateConfig) })).rejects.toThrow(
-      "Invalid semantic router configuration: model 'model-a' is defined more than once",
+      `Invalid semantic router configuration: model 'model-a' is defined more than once`,
     );
     expect(mkdir).not.toHaveBeenCalled();
     expect(dockerodeMock.createContainer).not.toHaveBeenCalled();
@@ -805,7 +805,7 @@ describe('SemanticRouterContainerManager', () => {
       .mockRejectedValueOnce(Object.assign(new Error('EEXIST: file already exists'), { code: 'EEXIST' }));
 
     await expect(manager.create({ name: 'my-router', config: stringify(defaultConfig) })).rejects.toThrow(
-      "A semantic router named 'my-router' already exists",
+      `A semantic router named 'my-router' already exists`,
     );
     expect(writeFile).not.toHaveBeenCalled();
     expect(dockerodeMock.createContainer).not.toHaveBeenCalled();
@@ -912,7 +912,7 @@ describe('SemanticRouterContainerManager', () => {
       );
 
       expect(loggerMock.error).toHaveBeenCalledWith(
-        "Failed to create semantic router 'my-router':",
+        `Failed to create semantic router 'my-router':`,
         expect.objectContaining({ message: 'offline' }),
       );
     });
@@ -1135,7 +1135,7 @@ describe('SemanticRouterContainerManager', () => {
       expect(otherStopMock).toHaveBeenCalled();
       expect(connection.status()).toBe('stopped');
       assert(error instanceof AggregateError);
-      expect(error.message).toBe("Failed to stop semantic router 'my-router'");
+      expect(error.message).toBe(`Failed to stop semantic router 'my-router'`);
       expect(error.errors).toEqual([expect.objectContaining({ message: 'stop failed' })]);
     });
 
