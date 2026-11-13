@@ -459,9 +459,7 @@ export class SemanticRouterContainerManager {
       },
       lifecycle: {
         start: async (): Promise<void> => {
-          await dockerode.getContainer(routerContainerId).start();
-          await dockerode.getContainer(envoyContainerId).start();
-          managed.running = true;
+          await this.startContainers(dockerode, [routerContainerId, envoyContainerId], name, managed);
         },
         stop: async (): Promise<void> => {
           await this.stopContainers(dockerode, [envoyContainerId, routerContainerId], name, managed);
@@ -473,6 +471,40 @@ export class SemanticRouterContainerManager {
     });
 
     this.#connections.set(connectionId, { ...managed, disposable });
+  }
+
+  // 304 Not Modified: the container is already in the requested state
+  private isNotModified(err: unknown): boolean {
+    return err instanceof Error && 'statusCode' in err && err.statusCode === 304;
+  }
+
+  // containers are started in order; if one fails, the ones already running are stopped again so that the
+  // connection is not left half started
+  private async startContainers(
+    dockerode: Dockerode,
+    containerIds: string[],
+    name: string,
+    managed: Pick<ManagedConnection, 'running'>,
+  ): Promise<void> {
+    const running: string[] = [];
+    for (const containerId of containerIds) {
+      try {
+        await dockerode.getContainer(containerId).start();
+      } catch (err: unknown) {
+        if (!this.isNotModified(err)) {
+          console.error(`vllm-semantic-router: failed to start container ${containerId} for router ${name}`, err);
+          try {
+            await this.stopContainers(dockerode, running.toReversed(), name, managed);
+          } catch (rollbackErr: unknown) {
+            console.error(`vllm-semantic-router: failed to roll back start of router ${name}`, rollbackErr);
+          }
+          throw err;
+        }
+        // already started
+      }
+      running.push(containerId);
+    }
+    managed.running = true;
   }
 
   // a failure on one container must not prevent stopping the other one or marking the connection as stopped
@@ -487,8 +519,8 @@ export class SemanticRouterContainerManager {
       try {
         await dockerode.getContainer(containerId).stop();
       } catch (err: unknown) {
-        // 304: the container is already stopped
-        if (err instanceof Error && 'statusCode' in err && err.statusCode === 304) {
+        if (this.isNotModified(err)) {
+          // already stopped
           continue;
         }
         console.error(`vllm-semantic-router: failed to stop container ${containerId} for router ${name}`, err);

@@ -1038,6 +1038,74 @@ describe('SemanticRouterContainerManager', () => {
     expect(registeredConnection.status()).toBe('stopped');
   });
 
+  describe('lifecycle.start failures', () => {
+    async function createStoppedConnection(): Promise<
+      Parameters<typeof providerMock.registerInferenceProviderConnection>[0]
+    > {
+      vi.mocked(createOpenAICompatible).mockReturnValueOnce({} as unknown as OpenAICompatibleProvider);
+      await manager.create({ name: 'my-router', config: stringify(defaultConfig) });
+      const connection = vi.mocked(providerMock.registerInferenceProviderConnection).mock.calls[0]?.[0];
+      assert(connection?.lifecycle?.start);
+      expect(connection.status()).toBe('stopped');
+      return connection;
+    }
+
+    test('stops the router again and stays stopped when envoy fails to start', async () => {
+      const connection = await createStoppedConnection();
+      envoyStartMock.mockRejectedValue(Object.assign(new Error('envoy start failed'), { statusCode: 500 }));
+      assert(connection.lifecycle?.start);
+
+      await expect(connection.lifecycle.start({} as never, {} as never)).rejects.toThrow('envoy start failed');
+
+      expect(routerStartMock).toHaveBeenCalled();
+      expect(routerStopMock).toHaveBeenCalled();
+      expect(envoyStopMock).not.toHaveBeenCalled();
+      expect(connection.status()).toBe('stopped');
+    });
+
+    test('does not start envoy when the router fails to start', async () => {
+      const connection = await createStoppedConnection();
+      routerStartMock.mockRejectedValue(new Error('router start failed'));
+      assert(connection.lifecycle?.start);
+
+      await expect(connection.lifecycle.start({} as never, {} as never)).rejects.toThrow('router start failed');
+
+      expect(envoyStartMock).not.toHaveBeenCalled();
+      expect(routerStopMock).not.toHaveBeenCalled();
+      expect(connection.status()).toBe('stopped');
+    });
+
+    test('rethrows the start error when rolling back fails', async () => {
+      const connection = await createStoppedConnection();
+      envoyStartMock.mockRejectedValue(new Error('envoy start failed'));
+      routerStopMock.mockRejectedValue(new Error('router stop failed'));
+      assert(connection.lifecycle?.start);
+
+      await expect(connection.lifecycle.start({} as never, {} as never)).rejects.toThrow('envoy start failed');
+
+      expect(connection.status()).toBe('stopped');
+    });
+
+    test.each([
+      { already: 'the router', routerError: true, envoyError: false },
+      { already: 'envoy', routerError: false, envoyError: true },
+      { already: 'both containers', routerError: true, envoyError: true },
+    ])('treats $already already started as started', async ({ routerError, envoyError }) => {
+      const connection = await createStoppedConnection();
+      const alreadyStarted = Object.assign(new Error('container already started'), { statusCode: 304 });
+      if (routerError) routerStartMock.mockRejectedValue(alreadyStarted);
+      if (envoyError) envoyStartMock.mockRejectedValue(alreadyStarted);
+      assert(connection.lifecycle?.start);
+
+      await expect(connection.lifecycle.start({} as never, {} as never)).resolves.toBeUndefined();
+
+      expect(routerStartMock).toHaveBeenCalled();
+      expect(envoyStartMock).toHaveBeenCalled();
+      expect(routerStopMock).not.toHaveBeenCalled();
+      expect(connection.status()).toBe('started');
+    });
+  });
+
   describe('lifecycle.stop failures', () => {
     async function createStartedConnection(): Promise<
       Parameters<typeof providerMock.registerInferenceProviderConnection>[0]
