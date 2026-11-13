@@ -284,17 +284,97 @@ describe('SemanticRouterContainerManager', () => {
       await vi.waitFor(() => expect(providerMock.registerInferenceProviderConnection).toHaveBeenCalledOnce());
     });
 
-    test('does not register an existing connection twice when the factory is registered again', async () => {
+    test('does not register an existing connection twice when endpoints change but its engine remains', async () => {
+      dockerodeMock.listContainers.mockResolvedValue(existingContainers('running'));
+      await manager.init();
+      const listener = vi.mocked(containerExtensionAPIMock.onEndpointsChanged).mock.calls[0]?.[0];
+      assert(listener);
+
+      listener([{ path: '/var/run/docker.sock', dockerode: dockerodeMock } as never]);
+
+      await vi.waitFor(() => expect(dockerodeMock.listContainers).toHaveBeenCalledTimes(2));
+      expect(providerMock.registerInferenceProviderConnection).toHaveBeenCalledOnce();
+      expect(connectionDisposable.dispose).not.toHaveBeenCalled();
+    });
+
+    test('registers a router only once when discoveries overlap', async () => {
+      vi.mocked(containerExtensionAPIMock.getEndpoints).mockReturnValue([]);
+      dockerodeMock.listContainers.mockResolvedValue(existingContainers('running'));
+      await manager.init();
+      const listener = vi.mocked(containerExtensionAPIMock.onEndpointsChanged).mock.calls[0]?.[0];
+      assert(listener);
+
+      listener([{ path: '/var/run/docker.sock', dockerode: dockerodeMock } as never]);
+      listener([{ path: '/var/run/docker.sock', dockerode: dockerodeMock } as never]);
+
+      await vi.waitFor(() => expect(dockerodeMock.listContainers).toHaveBeenCalledTimes(2));
+      await vi.waitFor(() => expect(providerMock.registerInferenceProviderConnection).toHaveBeenCalled());
+      expect(providerMock.registerInferenceProviderConnection).toHaveBeenCalledOnce();
+    });
+
+    test('unregisters connections when their engine goes away and registers them again when it comes back', async () => {
       dockerodeMock.listContainers.mockResolvedValue(existingContainers('running'));
       await manager.init();
       const listener = vi.mocked(containerExtensionAPIMock.onEndpointsChanged).mock.calls[0]?.[0];
       assert(listener);
 
       listener([]);
+
+      await vi.waitFor(() => expect(connectionDisposable.dispose).toHaveBeenCalledOnce());
+      expect(factoryDisposable.dispose).toHaveBeenCalledOnce();
+
       listener([{ path: '/var/run/docker.sock', dockerode: dockerodeMock } as never]);
 
-      await vi.waitFor(() => expect(dockerodeMock.listContainers).toHaveBeenCalledTimes(2));
-      expect(providerMock.registerInferenceProviderConnection).toHaveBeenCalledOnce();
+      await vi.waitFor(() => expect(providerMock.registerInferenceProviderConnection).toHaveBeenCalledTimes(2));
+    });
+
+    describe('with a second engine', () => {
+      const otherRouterInspectMock = vi.fn();
+      const otherDockerodeMock = { listContainers: vi.fn(), getContainer: vi.fn() };
+      const otherEndpoint = { path: '/run/podman/podman.sock', dockerode: otherDockerodeMock } as never;
+      const firstEndpoint = { path: '/var/run/docker.sock', dockerode: dockerodeMock } as never;
+
+      beforeEach(() => {
+        otherDockerodeMock.listContainers.mockResolvedValue(existingContainers('running', 'other'));
+        otherDockerodeMock.getContainer.mockReturnValue({ inspect: otherRouterInspectMock });
+        otherRouterInspectMock.mockResolvedValue({
+          HostConfig: { PortBindings: { '8801/tcp': [{ HostPort: '9999' }] } },
+        });
+      });
+
+      test('discovers the routers of an engine added later', async () => {
+        await manager.init();
+        const listener = vi.mocked(containerExtensionAPIMock.onEndpointsChanged).mock.calls[0]?.[0];
+        assert(listener);
+
+        listener([firstEndpoint, otherEndpoint]);
+
+        await vi.waitFor(() => expect(providerMock.registerInferenceProviderConnection).toHaveBeenCalledOnce());
+        const registeredConnection = vi.mocked(providerMock.registerInferenceProviderConnection).mock.calls[0]?.[0];
+        assert(registeredConnection);
+        expect(registeredConnection.id).toBe('other');
+        expect(registeredConnection.endpoint).toBe('http://localhost:9999/v1');
+      });
+
+      test('keeps the connections of the remaining engine when another engine goes away', async () => {
+        const firstDisposable = { dispose: vi.fn() };
+        const otherDisposable = { dispose: vi.fn() };
+        vi.mocked(providerMock.registerInferenceProviderConnection)
+          .mockReturnValueOnce(firstDisposable)
+          .mockReturnValueOnce(otherDisposable);
+        dockerodeMock.listContainers.mockResolvedValue(existingContainers('running'));
+        vi.mocked(containerExtensionAPIMock.getEndpoints).mockReturnValue([firstEndpoint, otherEndpoint]);
+        await manager.init();
+        expect(providerMock.registerInferenceProviderConnection).toHaveBeenCalledTimes(2);
+        const listener = vi.mocked(containerExtensionAPIMock.onEndpointsChanged).mock.calls[0]?.[0];
+        assert(listener);
+
+        listener([firstEndpoint]);
+
+        await vi.waitFor(() => expect(otherDisposable.dispose).toHaveBeenCalledOnce());
+        expect(firstDisposable.dispose).not.toHaveBeenCalled();
+        expect(factoryDisposable.dispose).not.toHaveBeenCalled();
+      });
     });
 
     // an unhandled rejection would fail the test run

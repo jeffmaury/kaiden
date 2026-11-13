@@ -46,6 +46,8 @@ interface ManagedConnection {
   routerContainerId: string;
   envoyContainerId: string;
   dockerode: Dockerode;
+  // socket path of the engine the containers run on
+  endpointPath: string;
   disposable: Disposable;
   port: number;
   running: boolean;
@@ -179,22 +181,36 @@ export class SemanticRouterContainerManager {
   }
 
   private async updateFactoryRegistration(endpoints: readonly EndpointConnection[]): Promise<void> {
-    if (endpoints.length > 0 && !this.#factoryDisposable) {
-      this.#factoryDisposable = this.provider.setSemanticRouterConnectionFactory({
-        type: 'vllm',
-        create: async (params: SemanticRouterCreateParams, logger?: Logger): Promise<SemanticRouter> => {
-          return this.create(params, logger);
-        },
-      });
+    this.unregisterConnectionsOfRemovedEndpoints(endpoints);
+    if (endpoints.length > 0) {
+      if (!this.#factoryDisposable) {
+        this.#factoryDisposable = this.provider.setSemanticRouterConnectionFactory({
+          type: 'vllm',
+          create: async (params: SemanticRouterCreateParams, logger?: Logger): Promise<SemanticRouter> => {
+            return this.create(params, logger);
+          },
+        });
+      }
+      // engines may have been added: discovery skips the routers already registered
       await this.discoverExistingConnections(endpoints);
-    } else if (endpoints.length === 0 && this.#factoryDisposable) {
+    } else if (this.#factoryDisposable) {
       this.#factoryDisposable.dispose();
       this.#factoryDisposable = undefined;
     }
   }
 
+  private unregisterConnectionsOfRemovedEndpoints(endpoints: readonly EndpointConnection[]): void {
+    const paths = new Set(endpoints.map(endpoint => endpoint.path));
+    for (const [connectionId, managed] of this.#connections) {
+      if (!paths.has(managed.endpointPath)) {
+        managed.disposable.dispose();
+        this.#connections.delete(connectionId);
+      }
+    }
+  }
+
   private async discoverExistingConnections(endpoints: readonly EndpointConnection[]): Promise<void> {
-    for (const { dockerode } of endpoints) {
+    for (const { path: endpointPath, dockerode } of endpoints) {
       let containers: Dockerode.ContainerInfo[];
       try {
         containers = await dockerode.listContainers({ all: true });
@@ -238,6 +254,7 @@ export class SemanticRouterContainerManager {
             name,
             envoyHostPort,
             dockerode,
+            endpointPath,
             router.Id,
             envoy.Id,
             router.State === 'running' && envoy.State === 'running',
@@ -292,7 +309,7 @@ export class SemanticRouterContainerManager {
     if (endpoints.length === 0) {
       throw new Error('No container engine available');
     }
-    const dockerode = endpoints[0].dockerode;
+    const { path: endpointPath, dockerode } = endpoints[0];
 
     await mkdir(this.getConfigsDir(), { recursive: true });
     const routerDir = this.getRouterDir(params.name);
@@ -307,7 +324,15 @@ export class SemanticRouterContainerManager {
 
     const createdContainers: Dockerode.Container[] = [];
     try {
-      return await this.createContainers(params, srConfig, dockerode, routerDir, createdContainers, logger);
+      return await this.createContainers(
+        params,
+        srConfig,
+        dockerode,
+        endpointPath,
+        routerDir,
+        createdContainers,
+        logger,
+      );
     } catch (err: unknown) {
       console.error(`vllm-semantic-router: failed to create semantic router '${params.name}'`, err);
       logger?.error(`Failed to create semantic router '${params.name}':`, err);
@@ -328,6 +353,7 @@ export class SemanticRouterContainerManager {
     params: SemanticRouterCreateParams,
     srConfig: SRConfig,
     dockerode: Dockerode,
+    endpointPath: string,
     routerDir: string,
     createdContainers: Dockerode.Container[],
     logger?: Logger,
@@ -409,6 +435,7 @@ export class SemanticRouterContainerManager {
       connectionId,
       envoyHostPort,
       dockerode,
+      endpointPath,
       routerContainer.id,
       envoyContainer.id,
       false,
@@ -422,10 +449,15 @@ export class SemanticRouterContainerManager {
     connectionId: string,
     envoyHostPort: number,
     dockerode: Dockerode,
+    endpointPath: string,
     routerContainerId: string,
     envoyContainerId: string,
     running: boolean,
   ): Promise<void> {
+    // discovery runs on every endpoints change and may overlap with another discovery or a creation
+    if (this.#connections.has(connectionId)) {
+      return;
+    }
     const sdk = createOpenAICompatible({
       baseURL: `http://localhost:${envoyHostPort}/v1`,
       name: `vllm-sr/${name}`,
@@ -435,6 +467,7 @@ export class SemanticRouterContainerManager {
       routerContainerId,
       envoyContainerId,
       dockerode,
+      endpointPath,
       port: envoyHostPort,
       running,
     };
