@@ -1039,6 +1039,64 @@ describe('SemanticRouterContainerManager', () => {
     expect(registeredConnection.status()).toBe('stopped');
   });
 
+  describe('lifecycle.stop failures', () => {
+    async function createStartedConnection(): Promise<
+      Parameters<typeof providerMock.registerInferenceProviderConnection>[0]
+    > {
+      vi.mocked(createOpenAICompatible).mockReturnValueOnce({} as unknown as OpenAICompatibleProvider);
+      await manager.create({ name: 'my-router', config: stringify(defaultConfig) });
+      const connection = vi.mocked(providerMock.registerInferenceProviderConnection).mock.calls[0]?.[0];
+      assert(connection?.lifecycle?.start);
+      await connection.lifecycle.start({} as never, {} as never);
+      expect(connection.status()).toBe('started');
+      return connection;
+    }
+
+    test.each([
+      { failing: 'envoy', stopMock: envoyStopMock, otherStopMock: routerStopMock },
+      { failing: 'router', stopMock: routerStopMock, otherStopMock: envoyStopMock },
+    ])('stops the other container and marks the connection stopped when $failing fails', async ({
+      stopMock,
+      otherStopMock,
+    }) => {
+      const connection = await createStartedConnection();
+      stopMock.mockRejectedValue(Object.assign(new Error('stop failed'), { statusCode: 500 }));
+      assert(connection.lifecycle?.stop);
+
+      const error = await connection.lifecycle.stop({} as never, {} as never).catch((err: unknown) => err);
+
+      expect(otherStopMock).toHaveBeenCalled();
+      expect(connection.status()).toBe('stopped');
+      assert(error instanceof AggregateError);
+      expect(error.message).toBe("Failed to stop semantic router 'my-router'");
+      expect(error.errors).toEqual([expect.objectContaining({ message: 'stop failed' })]);
+    });
+
+    test('reports both errors when both containers fail to stop', async () => {
+      const connection = await createStartedConnection();
+      envoyStopMock.mockRejectedValue(new Error('envoy stop failed'));
+      routerStopMock.mockRejectedValue(new Error('router stop failed'));
+      assert(connection.lifecycle?.stop);
+
+      const error = await connection.lifecycle.stop({} as never, {} as never).catch((err: unknown) => err);
+
+      expect(connection.status()).toBe('stopped');
+      assert(error instanceof AggregateError);
+      expect(error.errors).toHaveLength(2);
+    });
+
+    test('treats an already stopped container as stopped', async () => {
+      const connection = await createStartedConnection();
+      envoyStopMock.mockRejectedValue(Object.assign(new Error('container already stopped'), { statusCode: 304 }));
+      assert(connection.lifecycle?.stop);
+
+      await expect(connection.lifecycle.stop({} as never, {} as never)).resolves.toBeUndefined();
+
+      expect(routerStopMock).toHaveBeenCalled();
+      expect(connection.status()).toBe('stopped');
+    });
+  });
+
   test('lifecycle.delete stops and removes both containers', async () => {
     vi.mocked(createOpenAICompatible).mockReturnValueOnce({} as unknown as OpenAICompatibleProvider);
 

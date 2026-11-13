@@ -463,9 +463,7 @@ export class SemanticRouterContainerManager {
           managed.running = true;
         },
         stop: async (): Promise<void> => {
-          await dockerode.getContainer(envoyContainerId).stop();
-          await dockerode.getContainer(routerContainerId).stop();
-          managed.running = false;
+          await this.stopContainers(dockerode, [envoyContainerId, routerContainerId], name, managed);
         },
         delete: async (): Promise<void> => {
           await this.deleteConnection(connectionId, dockerode, routerContainerId, envoyContainerId, name);
@@ -474,6 +472,32 @@ export class SemanticRouterContainerManager {
     });
 
     this.#connections.set(connectionId, { ...managed, disposable });
+  }
+
+  // a failure on one container must not prevent stopping the other one or marking the connection as stopped
+  private async stopContainers(
+    dockerode: Dockerode,
+    containerIds: string[],
+    name: string,
+    managed: Pick<ManagedConnection, 'running'>,
+  ): Promise<void> {
+    const errors: unknown[] = [];
+    for (const containerId of containerIds) {
+      try {
+        await dockerode.getContainer(containerId).stop();
+      } catch (err: unknown) {
+        // 304: the container is already stopped
+        if (err instanceof Error && 'statusCode' in err && err.statusCode === 304) {
+          continue;
+        }
+        console.error(`vllm-semantic-router: failed to stop container ${containerId} for router ${name}`, err);
+        errors.push(err);
+      }
+    }
+    managed.running = false;
+    if (errors.length > 0) {
+      throw new AggregateError(errors, `Failed to stop semantic router '${name}'`);
+    }
   }
 
   private async deleteConnection(
