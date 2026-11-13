@@ -28,6 +28,7 @@ import type {
   SemanticRouter,
   SemanticRouterCreateParams,
 } from '@openkaiden/api';
+import { net } from '@openkaiden/api';
 import type { ContainerExtensionAPI, EndpointConnection } from '@openkaiden/container-extension-api';
 import type Dockerode from 'dockerode';
 import { inject, injectable } from 'inversify';
@@ -338,7 +339,7 @@ export class SemanticRouterContainerManager {
 
     await this.ensureImage(dockerode, SemanticRouterContainerManager.VLLM_SR_IMAGE, logger);
 
-    const envoyHostPort = await this.networkHelper.getFreeRandomPort();
+    const envoyHostPort = await net.getFreePort(0);
 
     const routerContainer = await dockerode.createContainer({
       Image: SemanticRouterContainerManager.VLLM_SR_IMAGE,

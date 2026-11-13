@@ -23,6 +23,7 @@ import path from 'node:path';
 import type { OpenAICompatibleProvider } from '@ai-sdk/openai-compatible';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import type { ExtensionContext, Provider } from '@openkaiden/api';
+import { net } from '@openkaiden/api';
 import type { ContainerExtensionAPI } from '@openkaiden/container-extension-api';
 import { Container } from 'inversify';
 import { assert, beforeEach, describe, expect, test, vi } from 'vitest';
@@ -148,7 +149,7 @@ describe('SemanticRouterContainerManager', () => {
     envoyStartMock.mockResolvedValue(undefined);
     envoyStopMock.mockResolvedValue(undefined);
     envoyRemoveMock.mockResolvedValue(undefined);
-    vi.mocked(NetworkHelper.prototype.getFreeRandomPort).mockResolvedValueOnce(50001);
+    vi.mocked(net.getFreePort).mockResolvedValue(50001);
     vi.mocked(NetworkHelper.prototype.convertHost).mockReturnValue('converted-host');
 
     const container = new Container();
@@ -466,8 +467,8 @@ describe('SemanticRouterContainerManager', () => {
 
     await manager.create({ name: 'my-router', config: stringify(defaultConfig) });
 
-    expect(NetworkHelper.prototype.getFreeRandomPort).toHaveBeenCalledOnce();
-    expect(NetworkHelper.prototype.getFreeRandomPort).toHaveBeenCalledWith();
+    expect(net.getFreePort).toHaveBeenCalledOnce();
+    expect(net.getFreePort).toHaveBeenCalledWith(0);
 
     const routerCall = dockerodeMock.createContainer.mock.calls[0];
     assert(routerCall);
@@ -481,9 +482,7 @@ describe('SemanticRouterContainerManager', () => {
   });
 
   test('create fails without creating containers when no free port is available', async () => {
-    vi.mocked(NetworkHelper.prototype.getFreeRandomPort)
-      .mockReset()
-      .mockRejectedValue(new Error('Unable to find a free port'));
+    vi.mocked(net.getFreePort).mockRejectedValue(new Error('Unable to find a free port'));
 
     await expect(manager.create({ name: 'my-router', config: stringify(defaultConfig) })).rejects.toThrow(
       'Unable to find a free port',
