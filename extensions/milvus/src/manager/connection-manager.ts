@@ -41,7 +41,7 @@ import { MilvusConnection } from '../api/milvus-connection';
 import { MilvusContainer } from '../api/milvus-container';
 import { ContainerExtensionAPISymbol, ExtensionContextSymbol, MilvusProvider } from '../inject/symbol';
 
-const MILVUS_IMAGE = 'docker.io/milvusdb/milvus:v2.6.3';
+const MILVUS_IMAGE = 'docker.io/milvusdb/milvus:v2.6.27';
 const MILVUS_PORT = 19530;
 
 type ConnectionEntry = {
