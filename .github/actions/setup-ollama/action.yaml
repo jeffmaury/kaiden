@@ -42,7 +42,7 @@ runs:
       uses: ai-action/setup-ollama@71ea83e32be8721c648fa946c5da9853679a3803 # v2
 
     - name: Cache Ollama models
-      uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5
+      uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
       with:
         path: ~/.ollama/models
         key: ollama-${{ inputs.model }}-${{ inputs.second_model || 'none' }}-${{ runner.os }}
