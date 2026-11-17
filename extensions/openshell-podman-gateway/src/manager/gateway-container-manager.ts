@@ -153,7 +153,7 @@ export class GatewayContainerManager implements Disposable {
   }
 
   private async createGatewayContainer(dockerode: Dockerode): Promise<number> {
-    await this.pullImage(dockerode);
+    await this.ensureImage(dockerode);
 
     const gatewayDir = join(this.extensionContext.storagePath, 'gateway');
 
@@ -249,6 +249,17 @@ export class GatewayContainerManager implements Disposable {
     const configPath = join(gatewayDir, 'gateway.toml');
     await writeFile(configPath, GATEWAY_CONFIG);
     console.log(`${LOG_PREFIX} gateway config written to ${configPath}`);
+  }
+
+  private async ensureImage(dockerode: Dockerode): Promise<void> {
+    try {
+      await dockerode.getImage(GATEWAY_IMAGE).inspect();
+      console.log(`${LOG_PREFIX} image ${GATEWAY_IMAGE} already present, skipping pull`);
+      return;
+    } catch {
+      // image not found locally, pull it
+    }
+    await this.pullImage(dockerode);
   }
 
   private async pullImage(dockerode: Dockerode): Promise<void> {

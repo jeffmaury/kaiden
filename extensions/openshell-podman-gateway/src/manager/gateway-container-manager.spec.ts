@@ -55,6 +55,7 @@ vi.mock(import('dockerode'));
 vi.mock(import('docker-modem'));
 
 const containerMock = new Dockerode.Container({}, 'container123');
+const imageMock = new Dockerode.Image({}, 'image123');
 const disposableMock = {
   dispose: vi.fn().mockResolvedValue(undefined),
 };
@@ -80,6 +81,8 @@ beforeEach(async () => {
   vi.mocked(Dockerode.prototype.createContainer).mockResolvedValue(containerMock);
   vi.mocked(Dockerode.prototype.getContainer).mockReturnValue(containerMock);
   vi.mocked(Dockerode.prototype.pull).mockResolvedValue({} as unknown as NodeJS.ReadableStream);
+  vi.mocked(Dockerode.prototype.getImage).mockReturnValue(imageMock);
+  vi.mocked(Dockerode.Image.prototype.inspect).mockRejectedValue(new Error('no such image'));
 
   containerExtensionAPIMock = {
     getEndpoints: vi.fn().mockReturnValue([endpointMock]),
@@ -231,6 +234,33 @@ describe('GatewayContainerManager', () => {
       }),
     );
     expect(Dockerode.Container.prototype.start).toHaveBeenCalled();
+  });
+
+  test('should skip image pull when image already exists locally', async () => {
+    Object.defineProperty(env, 'isWindows', { value: true, configurable: true });
+    setupCliMock('/usr/bin/openshell');
+    setupFollowProgress();
+    vi.mocked(processApi.exec).mockResolvedValue({ stdout: '', stderr: '', command: '' });
+    vi.mocked(Dockerode.Image.prototype.inspect).mockResolvedValue({} as Dockerode.ImageInspectInfo);
+
+    await gatewayContainerManager.init();
+
+    expect(Dockerode.prototype.getImage).toHaveBeenCalledWith(GATEWAY_IMAGE);
+    expect(Dockerode.prototype.pull).not.toHaveBeenCalled();
+    expect(Dockerode.prototype.createContainer).toHaveBeenCalledTimes(2);
+  });
+
+  test('should pull image when it does not exist locally', async () => {
+    Object.defineProperty(env, 'isWindows', { value: true, configurable: true });
+    setupCliMock('/usr/bin/openshell');
+    setupFollowProgress();
+    vi.mocked(processApi.exec).mockResolvedValue({ stdout: '', stderr: '', command: '' });
+
+    await gatewayContainerManager.init();
+
+    expect(Dockerode.prototype.getImage).toHaveBeenCalledWith(GATEWAY_IMAGE);
+    expect(Dockerode.prototype.pull).toHaveBeenCalledWith(GATEWAY_IMAGE);
+    expect(Dockerode.prototype.createContainer).toHaveBeenCalledTimes(2);
   });
 
   test('should create container with correct port configuration', async () => {
